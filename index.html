@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LH Math Practice</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --coral:#FF6B6B; --mint:#6BCB77; --blue:#4D96FF;
+    --purple:#C77DFF; --sun:#FFD93D; --ink:#1a1a2e; --soft:#f0f8ff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  button,.op-btn,.level-pill,.toggle-slider,.clear-btn{touch-action:manipulation;}
+  .op-btn,.level-pill{user-select:none;cursor:pointer;}
+  body{font-family:'Nunito',sans-serif;background:linear-gradient(160deg,#c9f0ff 0%,#e8f7ff 40%,#fef9e7 100%);min-height:100vh;color:var(--ink);overflow-x:hidden;}
+  .cloud{position:fixed;background:white;border-radius:50px;opacity:0.5;pointer-events:none;animation:drift linear infinite;}
+  .cloud::before,.cloud::after{content:'';position:absolute;background:white;border-radius:50%;}
+  .cloud-1{width:120px;height:40px;top:8%;animation-duration:35s;}
+  .cloud-1::before{width:60px;height:60px;top:-25px;left:15px;}
+  .cloud-1::after{width:45px;height:45px;top:-18px;left:50px;}
+  .cloud-2{width:90px;height:30px;top:65%;animation-duration:45s;animation-delay:-20s;opacity:0.35;}
+  .cloud-2::before{width:45px;height:45px;top:-20px;left:10px;}
+  .cloud-2::after{width:35px;height:35px;top:-14px;left:38px;}
+  @keyframes drift{from{transform:translateX(-200px)}to{transform:translateX(110vw)}}
+  .star{position:fixed;pointer-events:none;animation:twinkle 2s ease-in-out infinite;opacity:0;}
+  @keyframes twinkle{0%,100%{opacity:0;transform:scale(0.5)}50%{opacity:1;transform:scale(1)}}
+
+  .wrapper{max-width:960px;margin:0 auto;padding:24px 16px 60px;}
+  header{text-align:center;margin-bottom:28px;}
+  .title{font-family:'Baloo 2',cursive;font-size:clamp(2rem,6vw,3.2rem);color:var(--blue);text-shadow:3px 3px 0 rgba(77,150,255,0.18);letter-spacing:-1px;}
+  .title span{color:var(--coral);}
+  .subtitle{font-size:1rem;color:#6b8cae;margin-top:4px;font-weight:600;}
+
+  /* Setup */
+  .setup-panel{background:white;border-radius:24px;padding:28px 28px 32px;box-shadow:0 8px 40px rgba(77,150,255,0.12);margin-bottom:20px;}
+  .section-title{font-size:0.78rem;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:#8aaabf;margin-bottom:12px;}
+  .op-grid{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;}
+  .op-btn{flex:1;min-width:72px;padding:14px 10px;border:2.5px solid #e0edf5;border-radius:16px;background:white;cursor:pointer;text-align:center;transition:all 0.2s;font-family:'Nunito',sans-serif;}
+  .op-btn .op-symbol{font-family:'Baloo 2',cursive;font-size:1.8rem;line-height:1;display:block;}
+  .op-btn .op-name{font-size:0.72rem;font-weight:700;color:#8aaabf;margin-top:4px;}
+  .op-btn.active-add{border-color:var(--mint);background:#f0fff3;}
+  .op-btn.active-sub{border-color:var(--coral);background:#fff5f5;}
+  .op-btn.active-mul{border-color:var(--sun);background:#fffbee;}
+  .op-btn.active-div{border-color:var(--purple);background:#faf4ff;}
+  .op-btn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.08);}
+
+  .level-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;}
+  .level-col label{font-size:0.78rem;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:#8aaabf;display:block;margin-bottom:8px;}
+  .level-pills{display:flex;gap:8px;flex-wrap:wrap;}
+  .level-pill{padding:7px 14px;border-radius:30px;border:2px solid #e0edf5;background:white;cursor:pointer;font-weight:700;font-size:0.85rem;transition:all 0.2s;font-family:'Nunito',sans-serif;}
+  .level-pill.active{background:var(--blue);border-color:var(--blue);color:white;}
+  .level-info{font-size:0.77rem;color:#8aabcf;font-weight:600;margin-top:8px;line-height:1.7;min-height:44px;}
+
+  .count-row{display:flex;align-items:center;gap:14px;}
+  .count-input{width:80px;padding:10px 14px;border:2.5px solid #e0edf5;border-radius:12px;font-size:1.1rem;font-weight:800;font-family:'Nunito',sans-serif;text-align:center;color:var(--ink);outline:none;transition:border-color 0.2s;}
+  .count-input:focus{border-color:var(--blue);}
+  .count-hint{color:#8aaabf;font-size:0.85rem;font-weight:600;}
+
+  /* Remainder toggle */
+  .remainder-row{display:flex;align-items:center;gap:12px;margin-bottom:24px;padding:14px 18px;background:#faf4ff;border-radius:14px;border:2px solid #e8d5ff;}
+  .remainder-row label{font-weight:700;color:#7a50b0;font-size:0.95rem;cursor:pointer;user-select:none;flex:1;}
+  .toggle-switch{position:relative;width:46px;height:26px;flex-shrink:0;}
+  .toggle-switch input{opacity:0;width:0;height:0;}
+  .toggle-slider{position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:26px;transition:0.3s;}
+  .toggle-slider::before{content:'';position:absolute;height:20px;width:20px;left:3px;bottom:3px;background:white;border-radius:50%;transition:0.3s;}
+  input:checked + .toggle-slider{background:var(--purple);}
+  input:checked + .toggle-slider::before{transform:translateX(20px);}
+  .remainder-hint{font-size:0.78rem;color:#9a70c8;font-weight:600;}
+
+  .start-btn{width:100%;padding:18px;background:linear-gradient(135deg,var(--blue) 0%,#7b5ea7 100%);color:white;border:none;border-radius:18px;font-family:'Baloo 2',cursive;font-size:1.4rem;cursor:pointer;transition:all 0.25s;box-shadow:0 6px 20px rgba(77,150,255,0.35);letter-spacing:1px;touch-action:manipulation;}
+  .start-btn:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(77,150,255,0.4);}
+
+  /* History */
+  .history-panel{background:white;border-radius:20px;padding:20px 24px;box-shadow:0 4px 20px rgba(77,150,255,0.08);}
+  .history-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .history-title{font-family:'Baloo 2',cursive;font-size:1.1rem;color:#6b8cae;}
+  .clear-btn{font-size:0.75rem;font-weight:700;color:#bbbbc9;background:none;border:none;cursor:pointer;text-decoration:underline;}
+  .clear-btn:hover{color:var(--coral);}
+  .history-empty{color:#b0c8dc;font-size:0.9rem;font-weight:600;text-align:center;padding:10px 0;}
+  .history-table{width:100%;border-collapse:collapse;font-size:0.87rem;}
+  .history-table th{font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#9ab8cc;padding:0 8px 8px;text-align:left;border-bottom:2px solid #e8f4ff;}
+  .history-table td{padding:8px;border-bottom:1px solid #f0f7ff;font-weight:600;color:#3a5a7a;}
+  .history-table tr:last-child td{border-bottom:none;}
+  .pct-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-weight:800;font-size:0.82rem;}
+  .pct-high{background:#e8fff0;color:var(--mint);}
+  .pct-mid{background:#fff8e0;color:#c8900a;}
+  .pct-low{background:#fff0f0;color:var(--coral);}
+
+  /* Quiz */
+  #quiz-area{display:none;}
+  .top-bar{display:flex;align-items:center;justify-content:space-between;background:white;border-radius:18px;padding:14px 22px;margin-bottom:20px;box-shadow:0 4px 20px rgba(0,0,0,0.07);}
+  .timer-display{font-family:'Baloo 2',cursive;font-size:1.7rem;color:var(--coral);}
+  .progress-info{font-weight:800;font-size:0.95rem;color:#6b8cae;}
+  .config-label{font-size:0.8rem;font-weight:700;color:#8aaabf;text-align:right;}
+  .progress-bar-wrap{background:#e8f4ff;border-radius:20px;height:10px;margin-bottom:22px;overflow:hidden;}
+  .progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--mint),var(--blue));border-radius:20px;transition:width 0.4s ease;}
+
+  /* Question cards */
+  .q-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;}
+  .q-card{background:white;border-radius:16px;padding:13px 15px;display:flex;align-items:center;gap:8px;box-shadow:0 3px 12px rgba(0,0,0,0.06);border:2.5px solid transparent;transition:border-color 0.2s;flex-wrap:wrap;}
+  .q-card:focus-within{border-color:var(--blue);}
+  .q-card.correct{border-color:var(--mint);background:#f3fff5;}
+  .q-card.wrong{border-color:var(--coral);background:#fff4f4;}
+  .q-card.partial{border-color:var(--sun);background:#fffbee;}
+  .q-num{font-size:0.7rem;font-weight:800;color:#b0c8dc;width:20px;flex-shrink:0;}
+  .q-text{font-family:'Baloo 2',cursive;font-size:1.05rem;white-space:nowrap;flex-shrink:0;}
+  .q-input{border:none;border-bottom:2px solid #cce0f0;padding:3px 4px;font-family:'Baloo 2',cursive;font-size:1.1rem;text-align:center;color:var(--blue);outline:none;background:transparent;width:52px;}
+  .q-input:focus{border-bottom-color:var(--blue);}
+  .q-input:disabled{cursor:default;}
+
+  /* Remainder answer layout */
+  .q-answer-div{display:flex;align-items:center;gap:5px;flex-shrink:0;}
+  .q-rem-label{font-size:0.72rem;font-weight:800;color:#9ab8cc;white-space:nowrap;}
+  .q-feedback{font-size:1.05rem;width:20px;text-align:center;flex-shrink:0;}
+
+  /* After-submit correct answer display */
+  .q-correct-show{font-size:0.75rem;font-weight:700;color:var(--mint);margin-left:2px;white-space:nowrap;}
+
+  .submit-row{text-align:center;margin-top:28px;}
+  .submit-btn{padding:16px 48px;background:linear-gradient(135deg,var(--mint),#27b354);color:white;border:none;border-radius:16px;font-family:'Baloo 2',cursive;font-size:1.3rem;cursor:pointer;box-shadow:0 6px 20px rgba(107,203,119,0.35);transition:all 0.2s;letter-spacing:1px;}
+  .submit-btn:hover{transform:translateY(-3px);}
+
+  /* Results */
+  #result-area{display:none;}
+  .result-card{background:white;border-radius:28px;padding:40px 32px;text-align:center;box-shadow:0 12px 50px rgba(77,150,255,0.15);}
+  .result-emoji{font-size:5rem;display:block;margin-bottom:12px;animation:bounceIn 0.6s ease;}
+  @keyframes bounceIn{0%{transform:scale(0)}60%{transform:scale(1.2)}80%{transform:scale(0.95)}100%{transform:scale(1)}}
+  .result-title{font-family:'Baloo 2',cursive;font-size:2.2rem;color:var(--blue);margin-bottom:8px;}
+  .result-stats{display:flex;justify-content:center;gap:16px;margin:24px 0;flex-wrap:wrap;}
+  .stat-box{background:var(--soft);border-radius:16px;padding:14px 18px;min-width:95px;}
+  .stat-val{font-family:'Baloo 2',cursive;font-size:1.9rem;color:var(--ink);display:block;}
+  .stat-lbl{font-size:0.7rem;font-weight:800;color:#8aaabf;text-transform:uppercase;letter-spacing:1px;}
+  .score-pct{font-family:'Baloo 2',cursive;font-size:3.5rem;color:var(--coral);display:block;margin:8px 0 4px;}
+  .retry-btn{margin-top:24px;padding:15px 40px;background:linear-gradient(135deg,var(--blue),var(--purple));color:white;border:none;border-radius:14px;font-family:'Baloo 2',cursive;font-size:1.25rem;cursor:pointer;box-shadow:0 6px 20px rgba(77,150,255,0.3);transition:all 0.2s;}
+  .retry-btn:hover{transform:translateY(-3px);}
+  .review-section{margin-top:28px;text-align:left;}
+  .review-title{font-family:'Baloo 2',cursive;font-size:1.2rem;color:var(--coral);margin-bottom:14px;}
+  .review-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;}
+  .review-item{background:#fff4f4;border:2px solid #ffcdd2;border-radius:12px;padding:10px 14px;font-family:'Baloo 2',cursive;font-size:0.92rem;}
+  .your-ans{color:var(--coral);} .correct-ans{color:var(--mint);font-weight:800;}
+
+  @media(max-width:500px){.level-row{grid-template-columns:1fr;}.result-stats{gap:10px;}}
+</style>
+</head>
+<body>
+<noscript>
+  <div style="position:fixed;inset:0;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:sans-serif;padding:32px;text-align:center;z-index:9999;">
+    <div style="font-size:3rem;margin-bottom:16px;">⚠️</div>
+    <div style="font-size:1.2rem;font-weight:700;color:#1a1a2e;margin-bottom:12px;">JavaScript is required</div>
+    <div style="color:#6b8cae;font-size:1rem;line-height:1.6;">
+      This app can't run in this viewer.<br><br>
+      <strong>On iPad:</strong> tap <strong>Share ⎙</strong> → <strong>Open in Safari</strong>
+    </div>
+  </div>
+</noscript>
+<div id="webview-banner" style="display:none;position:fixed;top:0;left:0;right:0;background:#FF6B6B;color:white;text-align:center;padding:12px 16px;font-family:'Nunito',sans-serif;font-weight:700;font-size:0.9rem;z-index:9999;line-height:1.5;">
+  ⚠️ Buttons may not work here — tap <strong>Share ⎙ → Open in Safari</strong>
+</div>
+<div class="cloud cloud-1" style="left:-150px"></div>
+<div class="cloud cloud-2" style="left:-100px"></div>
+
+<div class="wrapper">
+  <header>
+    <div class="title">LH <span>Math</span> Practice 🌟</div>
+    <div class="subtitle">Quick Calculations · Auto Timer · Smart Scoring</div>
+  </header>
+
+  <!-- Setup -->
+  <div id="setup-area">
+    <div class="setup-panel">
+      <div class="section-title">Select Operations (multiple allowed)</div>
+      <div class="op-grid">
+        <div class="op-btn" data-op="add" onclick="toggleOp(this,'add')">
+          <span class="op-symbol">＋</span><div class="op-name">Addition</div>
+        </div>
+        <div class="op-btn" data-op="sub" onclick="toggleOp(this,'sub')">
+          <span class="op-symbol">－</span><div class="op-name">Subtraction</div>
+        </div>
+        <div class="op-btn" data-op="mul" onclick="toggleOp(this,'mul')">
+          <span class="op-symbol">×</span><div class="op-name">Multiplication</div>
+        </div>
+        <div class="op-btn active-div" data-op="div" onclick="toggleOp(this,'div')">
+          <span class="op-symbol">÷</span><div class="op-name">Division</div>
+        </div>
+      </div>
+
+      <!-- Remainder toggle — only relevant for division -->
+      <div class="remainder-row" id="remainder-row">
+        <label for="rem-toggle">🔢 Division with Remainder</label>
+        <div>
+          <div class="remainder-hint" id="rem-hint">Answer format: quotient ... R ...</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="rem-toggle" checked onchange="updateRemHint()">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="level-row">
+        <div class="level-col">
+          <label>Difficulty Level</label>
+          <div class="level-pills">
+            <div class="level-pill active" onclick="setLevel(this,1.1)">⭐ L1.1</div>
+            <div class="level-pill" onclick="setLevel(this,1.2)">⭐ L1.2</div>
+            <div class="level-pill" onclick="setLevel(this,2)">⭐⭐ L2</div>
+            <div class="level-pill" onclick="setLevel(this,3)">⭐⭐⭐ L3</div>
+          </div>
+          <div class="level-info" id="level-hint"></div>
+        </div>
+        <div class="level-col">
+          <label>Number of Questions</label>
+          <div class="count-row">
+            <input class="count-input" type="number" id="q-count" value="50" min="5" max="200">
+            <span class="count-hint">questions</span>
+          </div>
+        </div>
+      </div>
+
+      <button class="start-btn" onclick="startQuiz()">🚀 Start Practice!</button>
+    </div>
+
+    <!-- History -->
+    <div class="history-panel">
+      <div class="history-header">
+        <div class="history-title">📊 History</div>
+        <button class="clear-btn" onclick="clearHistory()">Clear History</button>
+      </div>
+      <div id="history-body"></div>
+    </div>
+  </div>
+
+  <!-- Quiz -->
+  <div id="quiz-area">
+    <div class="top-bar">
+      <div class="timer-display" id="timer-display">⏱ 0:00</div>
+      <div class="progress-info" id="progress-info">Filled 0 / 0</div>
+      <div class="config-label" id="config-label"></div>
+    </div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="progress-bar" style="width:0%"></div>
+    </div>
+    <div class="q-grid" id="q-grid"></div>
+    <div class="submit-row">
+      <button class="submit-btn" onclick="submitQuiz()">📝 Submit Answers</button>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="result-area">
+    <div class="result-card">
+      <span class="result-emoji" id="result-emoji">🎉</span>
+      <div class="result-title" id="result-title"></div>
+      <span class="score-pct" id="score-pct"></span>
+      <div class="result-stats">
+        <div class="stat-box"><span class="stat-val" id="r-correct">—</span><span class="stat-lbl">✅ Correct</span></div>
+        <div class="stat-box"><span class="stat-val" id="r-wrong">—</span><span class="stat-lbl">❌ Wrong</span></div>
+        <div class="stat-box"><span class="stat-val" id="r-blank">—</span><span class="stat-lbl">⬜ Blank</span></div>
+        <div class="stat-box"><span class="stat-val" id="r-time">—</span><span class="stat-lbl">⏱ Time</span></div>
+      </div>
+      <div id="review-section"></div>
+      <div id="correction-section" style="display:none;margin-top:24px;text-align:left;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div class="review-title" style="color:var(--blue);margin-bottom:0;">✏️ Correct Your Mistakes</div>
+          <span id="correction-count" style="font-size:0.85rem;color:#8aaabf;font-weight:700;"></span>
+        </div>
+        <div class="q-grid" id="correction-grid"></div>
+        <div class="submit-row" style="margin-top:20px;">
+          <button class="submit-btn" style="background:linear-gradient(135deg,var(--blue),var(--purple));" onclick="checkCorrections()">✅ Check Corrections</button>
+        </div>
+      </div>
+      <button class="retry-btn" id="retry-btn" onclick="resetQuiz()" style="display:none;">🔄 Try Again</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── iOS WebView detection ──────────────────────────
+(function() {
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  // In real Safari, UA contains "Safari/". Gmail, Files Quick Look, and other WKWebViews omit it.
+  const isWebView = isIOS && !/Safari\//.test(ua);
+  if (isWebView) document.getElementById('webview-banner').style.display = 'block';
+})();
+
+// ── State ──────────────────────────────────────────
+let activeOps = new Set(['div']);
+let currentLevel = 1.1;
+let questions = [];
+let timerInterval = null;
+let elapsedSeconds = 0;
+let quizConfig = {};
+let pendingCorrections = [];
+
+// ── Level hint ─────────────────────────────────────
+// Indices: 0=L1.1, 1=L1.2, 2=L2, 3=L3
+const OP_LEVEL_HINTS = {
+  add:  ['Add: two numbers each 0–50','Add: two numbers each 0–50','Add: two numbers each 0–200','Add: two numbers each 0–999'],
+  sub:  ['Sub: 0–50 (mostly no borrowing)','Sub: 0–50 (mostly no borrowing)','Sub: 0–200','Sub: 0–999'],
+  mul:  ['Mul: 2-digit × 1-digit','Mul: 2-digit × 1-digit','Mul: 3-digit × 1-digit','Mul: 3/4-digit × 2-digit'],
+  div:  ['Div: 2-digit ÷ 1-digit','Div: 2-digit ÷ 2-digit','Div: 3-digit ÷ 1-digit','Div: 3/4-digit ÷ 2-digit'],
+};
+
+function levelIndex(lv) {
+  if (lv === 1.1) return 0;
+  if (lv === 1.2) return 1;
+  if (lv === 2)   return 2;
+  return 3;
+}
+
+function updateLevelHint() {
+  const lines = [...activeOps].map(op => OP_LEVEL_HINTS[op][levelIndex(currentLevel)]);
+  document.getElementById('level-hint').innerHTML = lines.join('<br>');
+  // show/hide remainder row
+  const hasDiv = activeOps.has('div');
+  document.getElementById('remainder-row').style.display = hasDiv ? 'flex' : 'none';
+}
+
+function updateRemHint() {
+  const on = document.getElementById('rem-toggle').checked;
+  document.getElementById('rem-hint').textContent = on
+    ? 'Answer format: quotient ... R ...'
+    : 'Answer format: quotient (exact division)';
+}
+
+function toggleOp(btn, op) {
+  if (activeOps.has(op)) {
+    if (activeOps.size === 1) return;
+    activeOps.delete(op);
+    btn.className = 'op-btn';
+  } else {
+    activeOps.add(op);
+    btn.className = `op-btn active-${op}`;
+  }
+  updateLevelHint();
+}
+
+function setLevel(pill, lv) {
+  document.querySelectorAll('.level-pill').forEach(p => p.classList.remove('active'));
+  pill.classList.add('active');
+  currentLevel = lv;
+  updateLevelHint();
+}
+
+try { updateLevelHint(); } catch(e) {}
+
+// ── Question generation ────────────────────────────
+function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+function generateQuestion(op, lv, withRemainder) {
+  let a, b, quotient, remainder, answer, text;
+
+  const li = levelIndex(lv);
+
+  if (op === 'add') {
+    const mx = [50, 50, 200, 999][li];
+    a = rand(0, mx); b = rand(0, mx);
+    return { op, text: `${a} + ${b} =`, answer: a + b, hasRemainder: false };
+  }
+  if (op === 'sub') {
+    const mx = [50, 50, 200, 999][li];
+    a = rand(0, mx); b = rand(0, a);
+    return { op, text: `${a} − ${b} =`, answer: a - b, hasRemainder: false };
+  }
+  if (op === 'mul') {
+    if (li <= 1)     { a = rand(10, 99);   b = rand(2, 9); }
+    else if (li ===2){ a = rand(100, 999);  b = rand(2, 9); }
+    else             { a = rand(100, 9999); b = rand(10, 99); }
+    return { op, text: `${a} × ${b} =`, answer: a * b, hasRemainder: false };
+  }
+
+  // Division — li: 0=L1.1(2÷1), 1=L1.2(2÷2), 2=L2(3÷1), 3=L3(3/4÷2)
+  if (withRemainder) {
+    if (li === 0) {                          // L1.1: 2-digit ÷ 1-digit
+      b = rand(2, 9);
+      quotient = rand(2, 11);
+      remainder = rand(1, b - 1);
+      a = b * quotient + remainder;
+      if (a > 99) { quotient = rand(2, 8); remainder = rand(1, b - 1); a = b * quotient + remainder; }
+    } else if (li === 1) {                   // L1.2: 2-digit ÷ 2-digit
+      b = rand(11, 19);
+      quotient = rand(2, 4);
+      remainder = rand(1, b - 1);
+      a = b * quotient + remainder;
+    } else if (li === 2) {                   // L2: 3-digit ÷ 1-digit
+      b = rand(2, 9);
+      quotient = rand(11, 99);
+      remainder = rand(1, b - 1);
+      a = b * quotient + remainder;
+    } else {                                 // L3: 3/4-digit ÷ 2-digit
+      b = rand(11, 99);
+      quotient = rand(11, 99);
+      remainder = rand(1, b - 1);
+      a = b * quotient + remainder;
+    }
+    return { op, text: `${a} ÷ ${b} =`, answer: quotient, answerRemainder: remainder, hasRemainder: true };
+  } else {
+    // Exact division (no remainder)
+    if (li === 0) {                          // L1.1: 2-digit ÷ 1-digit
+      b = rand(2, 9); quotient = rand(2, 11); a = b * quotient;
+      if (a > 99) { quotient = rand(2, 9); a = b * quotient; }
+    } else if (li === 1) {                   // L1.2: 2-digit ÷ 2-digit
+      b = rand(11, 19); quotient = rand(2, 5); a = b * quotient;
+    } else if (li === 2) {                   // L2: 3-digit ÷ 1-digit
+      b = rand(2, 9); quotient = rand(11, 99); a = b * quotient;
+    } else {                                 // L3: 3/4-digit ÷ 2-digit
+      b = rand(11, 99); quotient = rand(11, 99); a = b * quotient;
+    }
+    return { op, text: `${a} ÷ ${b} =`, answer: quotient, answerRemainder: 0, hasRemainder: false };
+  }
+}
+
+// ── Start ──────────────────────────────────────────
+function startQuiz() {
+  const opsArr = [...activeOps];
+  const count = Math.max(5, Math.min(200, parseInt(document.getElementById('q-count').value) || 50));
+  const withRem = activeOps.has('div') && document.getElementById('rem-toggle').checked;
+  quizConfig = { ops: opsArr, level: currentLevel, count, withRem };
+
+  questions = [];
+  for (let i = 0; i < count; i++) {
+    const op = opsArr[Math.floor(Math.random() * opsArr.length)];
+    questions.push(generateQuestion(op, currentLevel, withRem && op === 'div'));
+  }
+
+  const opsLabel = opsArr.map(o => ({add:'Add',sub:'Sub',mul:'Mul',div:'Div'}[o])).join('/');
+  const remLabel = withRem ? ' · w/ rem' : '';
+  document.getElementById('config-label').textContent = `${opsLabel} · L${currentLevel}${remLabel} · ${count} Qs`;
+
+  const grid = document.getElementById('q-grid');
+  grid.innerHTML = '';
+  questions.forEach((q, i) => {
+    const card = document.createElement('div');
+    card.className = 'q-card'; card.id = `card-${i}`;
+
+    // Input area depends on whether this question has remainder
+    let inputHTML;
+    if (q.hasRemainder) {
+      inputHTML = `
+        <div class="q-answer-div">
+          <input class="q-input" type="number" id="inp-${i}" placeholder="Q" oninput="updateProgress()" onkeydown="handleKey(event,${i},'q')">
+          <span class="q-rem-label">R</span>
+          <input class="q-input" type="number" id="rem-${i}" placeholder="R" oninput="updateProgress()" onkeydown="handleKey(event,${i},'r')">
+        </div>`;
+    } else {
+      inputHTML = `<input class="q-input" type="number" id="inp-${i}" placeholder="?" oninput="updateProgress()" onkeydown="handleKey(event,${i},'q')">`;
+    }
+
+    card.innerHTML = `
+      <span class="q-num">${i+1}</span>
+      <span class="q-text">${q.text}</span>
+      ${inputHTML}
+      <span class="q-feedback" id="fb-${i}"></span>`;
+    grid.appendChild(card);
+  });
+
+  document.getElementById('setup-area').style.display = 'none';
+  document.getElementById('result-area').style.display = 'none';
+  document.getElementById('quiz-area').style.display = 'block';
+  updateProgress();
+
+  elapsedSeconds = 0; updateTimerDisplay();
+  timerInterval = setInterval(() => { elapsedSeconds++; updateTimerDisplay(); }, 1000);
+  document.getElementById('inp-0')?.focus();
+}
+
+function handleKey(e, i, field) {
+  if (e.key === 'Enter' || e.key === 'Tab') {
+    e.preventDefault();
+    // If on quotient field of a remainder question, move to remainder field first
+    if (field === 'q' && questions[i]?.hasRemainder) {
+      document.getElementById(`rem-${i}`)?.focus();
+      return;
+    }
+    // Otherwise move to next question
+    const next = document.getElementById(`inp-${i+1}`);
+    if (next) { next.focus(); next.select(); }
+  }
+}
+
+function updateProgress() {
+  const total = questions.length;
+  let filled = 0;
+  for (let i = 0; i < total; i++) {
+    const v = document.getElementById(`inp-${i}`)?.value.trim() || '';
+    const hasRem = questions[i]?.hasRemainder;
+    const r = hasRem ? (document.getElementById(`rem-${i}`)?.value.trim() || '') : '0';
+    if (v !== '' && (!hasRem || r !== '')) filled++;
+  }
+  document.getElementById('progress-info').textContent = `Filled ${filled} / ${total}`;
+  document.getElementById('progress-bar').style.width = `${(filled/total)*100}%`;
+}
+
+function updateTimerDisplay() {
+  const m = Math.floor(elapsedSeconds / 60), s = elapsedSeconds % 60;
+  document.getElementById('timer-display').textContent = `⏱ ${m}:${s.toString().padStart(2,'0')}`;
+}
+
+// ── Submit ─────────────────────────────────────────
+function submitQuiz() {
+  clearInterval(timerInterval);
+  const totalTime = elapsedSeconds;
+  let correct = 0, wrong = 0, blank = 0;
+  const wrongList = [];
+
+  questions.forEach((q, i) => {
+    const inp = document.getElementById(`inp-${i}`);
+    const remInp = document.getElementById(`rem-${i}`);
+    const card = document.getElementById(`card-${i}`);
+    const fb = document.getElementById(`fb-${i}`);
+    const val = inp.value.trim();
+    const remVal = remInp ? remInp.value.trim() : null;
+
+    inp.disabled = true;
+    if (remInp) remInp.disabled = true;
+
+    const isBlank = val === '' || (q.hasRemainder && remVal === '');
+
+    if (isBlank) {
+      blank++;
+      wrongList.push({ num: i+1, text: q.text, yours: '' });
+    } else {
+      const qCorrect = parseInt(val) === q.answer;
+      const rCorrect = !q.hasRemainder || parseInt(remVal) === q.answerRemainder;
+
+      if (qCorrect && rCorrect) {
+        correct++;
+        card.classList.add('correct');
+        fb.textContent = '✅';
+      } else {
+        wrong++;
+        card.classList.add('wrong');
+        fb.textContent = '❌';
+        const yourStr = q.hasRemainder ? `${val} R${remVal}` : val;
+        wrongList.push({ num: i+1, text: q.text, yours: yourStr });
+      }
+    }
+  });
+
+  const total = questions.length;
+  const pct = Math.round((correct / total) * 100);
+  const m = Math.floor(totalTime/60), s = totalTime%60;
+  const timeStr = `${m}:${s.toString().padStart(2,'0')}`;
+
+  let emoji, title;
+  if (pct >= 95)      { emoji='🏆'; title='Perfect! Amazing!'; }
+  else if (pct >= 85) { emoji='🌟'; title='Excellent! Keep it up!'; }
+  else if (pct >= 70) { emoji='😊'; title='Good job!'; }
+  else if (pct >= 50) { emoji='💪'; title='Keep going, you\'ll do better!'; }
+  else                { emoji='🤔'; title='More practice makes perfect!'; }
+
+  document.getElementById('result-emoji').textContent = emoji;
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('score-pct').textContent = `${pct}%`;
+  document.getElementById('r-correct').textContent = correct;
+  document.getElementById('r-wrong').textContent = wrong;
+  document.getElementById('r-blank').textContent = blank;
+  document.getElementById('r-time').textContent = timeStr;
+
+  const rev = document.getElementById('review-section');
+  if (wrongList.length > 0) {
+    rev.innerHTML = `<div class="review-title">❌ Wrong Answers (${wrongList.length})</div>
+      <div class="review-list">${wrongList.map(w =>
+        `<div class="review-item">
+          <div>${w.num}. ${w.text} <span class="your-ans">${w.yours || '(blank)'}</span></div>
+        </div>`).join('')}</div>`;
+  } else {
+    rev.innerHTML = '<div style="color:var(--mint);font-family:\'Baloo 2\',cursive;font-size:1.1rem;margin-top:8px;text-align:center;">🎯 All correct, zero mistakes!</div>';
+  }
+
+  document.getElementById('quiz-area').style.display = 'none';
+  document.getElementById('result-area').style.display = 'block';
+  if (pct >= 85) launchStars();
+
+  const opsLabel = quizConfig.ops.map(o => ({add:'Add',sub:'Sub',mul:'Mul',div:'Div'}[o])).join('/');
+  saveHistory({ pct, correct, total, timeStr, opsLabel, level: quizConfig.level, withRem: quizConfig.withRem });
+
+  // Build correction round if there are mistakes
+  if (wrong > 0 || blank > 0) {
+    buildCorrectionSection();
+  } else {
+    document.getElementById('retry-btn').style.display = 'inline-block';
+  }
+}
+
+// ── Correction round ───────────────────────────────
+function buildCorrectionSection() {
+  pendingCorrections = [];
+  const grid = document.getElementById('correction-grid');
+  grid.innerHTML = '';
+
+  questions.forEach((q, i) => {
+    const origCard = document.getElementById(`card-${i}`);
+    if (origCard.classList.contains('correct')) return;
+    pendingCorrections.push(i);
+
+    const card = document.createElement('div');
+    card.className = 'q-card';
+    card.id = `corr-card-${i}`;
+
+    let inputHTML;
+    if (q.hasRemainder) {
+      inputHTML = `
+        <div class="q-answer-div">
+          <input class="q-input" type="number" id="corr-inp-${i}" placeholder="Q"
+            onkeydown="handleCorrKey(event,${i},'q')">
+          <span class="q-rem-label">R</span>
+          <input class="q-input" type="number" id="corr-rem-${i}" placeholder="R"
+            onkeydown="handleCorrKey(event,${i},'r')">
+        </div>`;
+    } else {
+      inputHTML = `<input class="q-input" type="number" id="corr-inp-${i}" placeholder="?"
+        onkeydown="handleCorrKey(event,${i},'q')">`;
+    }
+
+    card.innerHTML = `
+      <span class="q-num">${i+1}</span>
+      <span class="q-text">${q.text}</span>
+      ${inputHTML}
+      <span class="q-feedback" id="corr-fb-${i}"></span>`;
+    grid.appendChild(card);
+  });
+
+  updateCorrectionCount();
+  document.getElementById('correction-section').style.display = 'block';
+  document.getElementById(`corr-inp-${pendingCorrections[0]}`)?.focus();
+}
+
+function handleCorrKey(e, i, field) {
+  if (e.key === 'Enter' || e.key === 'Tab') {
+    e.preventDefault();
+    if (field === 'q' && questions[i]?.hasRemainder) {
+      document.getElementById(`corr-rem-${i}`)?.focus();
+      return;
+    }
+    const nextIdx = pendingCorrections[pendingCorrections.indexOf(i) + 1];
+    if (nextIdx !== undefined) {
+      document.getElementById(`corr-inp-${nextIdx}`)?.focus();
+    }
+  }
+}
+
+function checkCorrections() {
+  const stillPending = [];
+
+  pendingCorrections.forEach(i => {
+    const q = questions[i];
+    const inp = document.getElementById(`corr-inp-${i}`);
+    const remInp = document.getElementById(`corr-rem-${i}`);
+    const card = document.getElementById(`corr-card-${i}`);
+    const fb = document.getElementById(`corr-fb-${i}`);
+
+    const val = inp.value.trim();
+    const remVal = remInp ? remInp.value.trim() : null;
+
+    if (val === '' || (q.hasRemainder && remVal === '')) {
+      card.classList.add('wrong'); card.classList.remove('correct');
+      fb.textContent = '❌';
+      stillPending.push(i);
+      return;
+    }
+
+    const qCorrect = parseInt(val) === q.answer;
+    const rCorrect = !q.hasRemainder || parseInt(remVal) === q.answerRemainder;
+
+    if (qCorrect && rCorrect) {
+      card.classList.add('correct'); card.classList.remove('wrong');
+      fb.textContent = '✅';
+      inp.disabled = true;
+      if (remInp) remInp.disabled = true;
+    } else {
+      card.classList.add('wrong'); card.classList.remove('correct');
+      fb.textContent = '❌';
+      inp.value = '';
+      if (remInp) remInp.value = '';
+      stillPending.push(i);
+    }
+  });
+
+  pendingCorrections = stillPending;
+  updateCorrectionCount();
+
+  if (pendingCorrections.length === 0) {
+    document.getElementById('correction-section').innerHTML =
+      '<div style="color:var(--mint);font-family:\'Baloo 2\',cursive;font-size:1.2rem;text-align:center;padding:20px 0;">🎉 All mistakes corrected! Great job!</div>';
+    document.getElementById('retry-btn').style.display = 'inline-block';
+    launchStars();
+  } else {
+    document.getElementById(`corr-inp-${pendingCorrections[0]}`)?.focus();
+  }
+}
+
+function updateCorrectionCount() {
+  const el = document.getElementById('correction-count');
+  if (el) el.textContent = `${pendingCorrections.length} remaining`;
+}
+
+function resetQuiz() {
+  pendingCorrections = [];
+  document.getElementById('correction-section').style.display = 'none';
+  document.getElementById('correction-grid').innerHTML = '';
+  document.getElementById('retry-btn').style.display = 'none';
+  document.getElementById('result-area').style.display = 'none';
+  document.getElementById('setup-area').style.display = 'block';
+  renderHistory();
+}
+
+// ── History ────────────────────────────────────────
+const HISTORY_KEY = 'lh_math_v3';
+function loadHistory() { try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch { return []; } }
+
+function saveHistory({ pct, correct, total, timeStr, opsLabel, level, withRem }) {
+  const list = loadHistory();
+  const now = new Date();
+  const date = `${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  list.unshift({ date, ops: opsLabel, level: 'L'+level, rem: withRem ? 'w/ rem' : '', correct, total, pct, time: timeStr });
+  if (list.length > 50) list.pop();
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(list)); } catch {}
+}
+
+function clearHistory() {
+  if (confirm('Clear all history records?')) {
+    try { localStorage.removeItem(HISTORY_KEY); } catch {}
+    renderHistory();
+  }
+}
+
+function renderHistory() {
+  const list = loadHistory();
+  const el = document.getElementById('history-body');
+  if (!list.length) { el.innerHTML = '<div class="history-empty">No records yet. Complete your first practice session! 🙂</div>'; return; }
+  el.innerHTML = `<table class="history-table">
+    <thead><tr><th>Time</th><th>Operation</th><th>Level</th><th>Questions</th><th>Score</th><th>Duration</th></tr></thead>
+    <tbody>${list.map(r => {
+      const cls = r.pct >= 85 ? 'pct-high' : r.pct >= 60 ? 'pct-mid' : 'pct-low';
+      const remTag = r.rem ? ` <span style="font-size:0.7rem;color:#a070d0">(${r.rem})</span>` : '';
+      return `<tr>
+        <td>${r.date}</td><td>${r.ops}${remTag}</td><td>${r.level}</td>
+        <td>${r.correct}/${r.total}</td>
+        <td><span class="pct-badge ${cls}">${r.pct}%</span></td>
+        <td>${r.time}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+try { renderHistory(); } catch(e) {}
+
+// ── Stars ──────────────────────────────────────────
+function launchStars() {
+  ['⭐','🌟','✨','🎉','🎊'].forEach(e => {
+    for (let i = 0; i < 3; i++) {
+      const s = document.createElement('div');
+      s.className = 'star'; s.textContent = e;
+      s.style.cssText = `left:${Math.random()*100}vw;top:${Math.random()*100}vh;font-size:${1.2+Math.random()*2}rem;animation-delay:${Math.random()*2.5}s;animation-duration:${1.5+Math.random()}s`;
+      document.body.appendChild(s);
+      setTimeout(() => s.remove(), 5000);
+    }
+  });
+}
+</script>
+</body>
+</html>

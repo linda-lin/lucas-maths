@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lucas's Todo Board</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --coral:#FF6B6B; --mint:#6BCB77; --blue:#4D96FF;
+    --purple:#C77DFF; --sun:#FFD93D; --ink:#1a1a2e; --soft:#f0f8ff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  button{touch-action:manipulation;font-family:'Nunito',sans-serif;}
+  body{font-family:'Nunito',sans-serif;background:linear-gradient(160deg,#c9f0ff 0%,#e8f7ff 40%,#fef9e7 100%);min-height:100vh;color:var(--ink);overflow-x:hidden;}
+
+  /* Clouds */
+  .cloud{position:fixed;background:white;border-radius:50px;opacity:0.5;pointer-events:none;animation:drift linear infinite;}
+  .cloud::before,.cloud::after{content:'';position:absolute;background:white;border-radius:50%;}
+  .cloud-1{width:120px;height:40px;top:8%;animation-duration:35s;}
+  .cloud-1::before{width:60px;height:60px;top:-25px;left:15px;}
+  .cloud-1::after{width:45px;height:45px;top:-18px;left:50px;}
+  .cloud-2{width:90px;height:30px;top:65%;animation-duration:45s;animation-delay:-20s;opacity:0.35;}
+  .cloud-2::before{width:45px;height:45px;top:-20px;left:10px;}
+  .cloud-2::after{width:35px;height:35px;top:-14px;left:38px;}
+  @keyframes drift{from{transform:translateX(-200px)}to{transform:translateX(110vw)}}
+
+  .wrapper{max-width:640px;margin:0 auto;padding:20px 16px 100px;}
+
+  /* Header */
+  header{text-align:center;margin-bottom:8px;}
+  .title{font-family:'Baloo 2',cursive;font-size:clamp(1.8rem,5vw,2.6rem);color:var(--blue);text-shadow:3px 3px 0 rgba(77,150,255,0.18);letter-spacing:-1px;}
+  .title span{color:var(--coral);}
+  .date-line{font-size:0.9rem;color:#6b8cae;font-weight:600;margin-top:2px;}
+
+  /* Level badge + XP */
+  .level-section{background:white;border-radius:20px;padding:16px 20px;box-shadow:0 4px 20px rgba(77,150,255,0.1);margin-bottom:16px;text-align:center;}
+  .level-badge{display:inline-flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .level-circle{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--purple));color:white;font-family:'Baloo 2',cursive;font-size:1.3rem;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(77,150,255,0.3);}
+  .level-name{font-family:'Baloo 2',cursive;font-size:1.15rem;color:var(--ink);}
+  .xp-bar-wrap{background:#e8f4ff;border-radius:20px;height:14px;overflow:hidden;position:relative;}
+  .xp-bar-fill{height:100%;background:linear-gradient(90deg,var(--mint),var(--blue));border-radius:20px;transition:width 0.6s ease;}
+  .xp-label{font-size:0.78rem;font-weight:700;color:#6b8cae;margin-top:4px;}
+  .star-balance{font-family:'Baloo 2',cursive;font-size:1.1rem;color:var(--sun);margin-top:4px;text-shadow:0 1px 2px rgba(0,0,0,0.1);}
+
+  /* Task cards */
+  .section-label{font-size:0.78rem;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:#8aaabf;margin:16px 0 10px;display:flex;align-items:center;gap:6px;}
+  .task-card{background:white;border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 3px 12px rgba(0,0,0,0.06);margin-bottom:10px;border-left:5px solid var(--blue);transition:all 0.3s;cursor:pointer;user-select:none;position:relative;overflow:hidden;}
+  .task-card.bonus-card{border-left-color:var(--sun);}
+  .task-card.done{border-left-color:var(--mint);background:#f3fff5;opacity:0.75;}
+  .task-card.done .task-name{text-decoration:line-through;color:#8aabcf;}
+  .task-emoji{font-size:1.6rem;flex-shrink:0;}
+  .task-info{flex:1;min-width:0;}
+  .task-name{font-weight:700;font-size:1rem;color:var(--ink);}
+  .task-stars{font-size:0.8rem;font-weight:700;color:var(--sun);}
+  .check-btn{width:42px;height:42px;border-radius:50%;border:3px solid #d0e0ee;background:white;font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;flex-shrink:0;}
+  .check-btn:hover{border-color:var(--mint);transform:scale(1.1);}
+  .task-card.done .check-btn{background:var(--mint);border-color:var(--mint);color:white;}
+
+  /* Star burst animation */
+  .star-burst{position:absolute;pointer-events:none;font-size:1.4rem;animation:burstOut 0.7s ease-out forwards;}
+  @keyframes burstOut{
+    0%{opacity:1;transform:translate(0,0) scale(1);}
+    100%{opacity:0;transform:translate(var(--bx),var(--by)) scale(0.3);}
+  }
+
+  /* Bonus section */
+  .bonus-toggle{background:white;border-radius:16px;padding:14px 20px;box-shadow:0 3px 12px rgba(0,0,0,0.06);margin-bottom:10px;cursor:pointer;text-align:center;font-weight:700;font-size:1rem;color:var(--sun);border:2px dashed var(--sun);transition:all 0.2s;user-select:none;}
+  .bonus-toggle:hover{background:#fffbee;transform:translateY(-1px);}
+  .bonus-menu{display:none;margin-bottom:10px;}
+  .bonus-menu.open{display:block;}
+  .bonus-pick-card{background:white;border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,0.05);margin-bottom:8px;border:2px solid #ffe499;transition:all 0.2s;}
+  .bonus-pick-card:hover{border-color:var(--sun);background:#fffdf5;}
+  .add-bonus-btn{width:36px;height:36px;border-radius:50%;border:2px solid var(--sun);background:#fffbee;font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;flex-shrink:0;color:var(--sun);font-weight:800;}
+  .add-bonus-btn:hover{background:var(--sun);color:white;transform:scale(1.1);}
+
+  /* All-done celebration */
+  .all-done-banner{display:none;background:linear-gradient(135deg,var(--mint),#27b354);border-radius:20px;padding:24px;text-align:center;color:white;margin-bottom:16px;animation:bounceIn 0.5s ease;}
+  .all-done-banner.show{display:block;}
+  .all-done-banner .big-emoji{font-size:3rem;display:block;margin-bottom:8px;}
+  .all-done-banner .done-text{font-family:'Baloo 2',cursive;font-size:1.5rem;}
+  @keyframes bounceIn{0%{transform:scale(0)}60%{transform:scale(1.1)}80%{transform:scale(0.95)}100%{transform:scale(1)}}
+
+  /* Level-up overlay */
+  .levelup-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;}
+  .levelup-overlay.show{display:flex;}
+  .levelup-card{background:white;border-radius:28px;padding:40px 32px;text-align:center;box-shadow:0 12px 50px rgba(77,150,255,0.25);animation:bounceIn 0.6s ease;max-width:360px;width:90%;}
+  .levelup-card .big-emoji{font-size:4rem;display:block;margin-bottom:12px;}
+  .levelup-card .lu-title{font-family:'Baloo 2',cursive;font-size:2rem;color:var(--blue);margin-bottom:4px;}
+  .levelup-card .lu-name{font-family:'Baloo 2',cursive;font-size:1.4rem;color:var(--purple);margin-bottom:16px;}
+  .levelup-card .lu-btn{padding:12px 36px;background:linear-gradient(135deg,var(--blue),var(--purple));color:white;border:none;border-radius:14px;font-family:'Baloo 2',cursive;font-size:1.15rem;cursor:pointer;box-shadow:0 4px 16px rgba(77,150,255,0.3);}
+
+  /* Bottom bar */
+  .bottom-bar{position:fixed;bottom:0;left:0;right:0;background:white;box-shadow:0 -4px 20px rgba(0,0,0,0.08);display:flex;justify-content:center;gap:12px;padding:12px 16px;z-index:100;}
+  .bottom-btn{padding:10px 24px;border-radius:14px;border:none;font-weight:800;font-size:0.95rem;cursor:pointer;transition:all 0.2s;}
+  .bottom-btn:hover{transform:translateY(-2px);}
+  .shop-btn{background:linear-gradient(135deg,var(--sun),#f0c000);color:#5a4200;box-shadow:0 3px 12px rgba(255,217,61,0.4);}
+  .parent-btn{background:#f0f4f8;color:#8aaabf;font-size:0.85rem;}
+
+  /* Views */
+  .view{display:none;}
+  .view.active{display:block;}
+
+  /* Reward Shop */
+  .shop-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+  .shop-title{font-family:'Baloo 2',cursive;font-size:1.4rem;color:var(--blue);}
+  .shop-stars{font-family:'Baloo 2',cursive;font-size:1.2rem;color:var(--sun);}
+  .back-btn{padding:8px 18px;border-radius:12px;border:2px solid #e0edf5;background:white;font-weight:700;font-size:0.85rem;cursor:pointer;color:#6b8cae;}
+  .back-btn:hover{border-color:var(--blue);color:var(--blue);}
+  .reward-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;}
+  .reward-card{background:white;border-radius:16px;padding:16px;text-align:center;box-shadow:0 3px 12px rgba(0,0,0,0.06);transition:all 0.2s;}
+  .reward-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.1);}
+  .reward-emoji{font-size:2.2rem;display:block;margin-bottom:6px;}
+  .reward-name{font-weight:700;font-size:0.95rem;margin-bottom:4px;}
+  .reward-cost{font-size:0.85rem;font-weight:700;color:var(--sun);margin-bottom:8px;}
+  .redeem-btn{padding:8px 16px;border-radius:10px;border:none;font-weight:800;font-size:0.82rem;cursor:pointer;transition:all 0.2s;width:100%;}
+  .redeem-btn.can-afford{background:linear-gradient(135deg,var(--mint),#27b354);color:white;box-shadow:0 3px 10px rgba(107,203,119,0.3);}
+  .redeem-btn.can-afford:hover{transform:translateY(-1px);}
+  .redeem-btn.cant-afford{background:#f0f4f8;color:#8aaabf;cursor:default;}
+
+  /* Toast */
+  .toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);background:white;border-radius:14px;padding:12px 24px;box-shadow:0 6px 30px rgba(0,0,0,0.15);font-weight:700;font-size:0.95rem;z-index:2000;transition:transform 0.4s ease;white-space:nowrap;}
+  .toast.show{transform:translateX(-50%) translateY(0);}
+
+  /* Parent setup */
+  .parent-panel{background:white;border-radius:20px;padding:20px 24px;box-shadow:0 4px 20px rgba(77,150,255,0.1);margin-bottom:16px;}
+  .parent-title{font-family:'Baloo 2',cursive;font-size:1.1rem;color:var(--purple);margin-bottom:12px;}
+  .task-edit-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;}
+  .task-edit-row input{padding:8px 10px;border:2px solid #e0edf5;border-radius:10px;font-family:'Nunito',sans-serif;font-weight:600;outline:none;font-size:0.9rem;}
+  .task-edit-row input:focus{border-color:var(--blue);}
+  .emoji-input{width:50px;text-align:center;font-size:1.1rem;}
+  .name-input{flex:1;min-width:120px;}
+  .stars-input{width:60px;text-align:center;}
+  .remove-task-btn{width:32px;height:32px;border-radius:50%;border:none;background:#fff0f0;color:var(--coral);font-size:1rem;cursor:pointer;flex-shrink:0;}
+  .remove-task-btn:hover{background:var(--coral);color:white;}
+  .add-task-btn{padding:8px 18px;border-radius:12px;border:2px dashed #d0e0ee;background:white;color:#6b8cae;font-weight:700;font-size:0.85rem;cursor:pointer;width:100%;margin-top:4px;}
+  .add-task-btn:hover{border-color:var(--blue);color:var(--blue);}
+
+  .parent-controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;}
+  .ctrl-btn{padding:8px 16px;border-radius:10px;border:2px solid #e0edf5;background:white;font-weight:700;font-size:0.82rem;cursor:pointer;color:#6b8cae;}
+  .ctrl-btn:hover{border-color:var(--blue);color:var(--blue);}
+  .ctrl-btn.danger{border-color:#ffcdd2;color:var(--coral);}
+  .ctrl-btn.danger:hover{background:var(--coral);color:white;}
+
+  /* Star balance adjuster */
+  .star-adjust{display:flex;align-items:center;gap:8px;margin-top:12px;}
+  .star-adjust label{font-weight:700;font-size:0.85rem;color:#6b8cae;}
+  .star-adjust input{width:70px;padding:6px 8px;border:2px solid #e0edf5;border-radius:8px;font-weight:700;text-align:center;font-family:'Nunito',sans-serif;}
+  .star-adjust button{padding:6px 14px;border-radius:8px;border:none;background:var(--blue);color:white;font-weight:700;font-size:0.82rem;cursor:pointer;}
+
+  /* Confetti */
+  .confetti-piece{position:fixed;pointer-events:none;z-index:1500;animation:confettiFall linear forwards;}
+  @keyframes confettiFall{
+    0%{opacity:1;transform:translateY(0) rotate(0deg);}
+    100%{opacity:0;transform:translateY(100vh) rotate(720deg);}
+  }
+
+  /* Stars twinkle */
+  .star-particle{position:fixed;pointer-events:none;animation:twinkle 2s ease-in-out infinite;opacity:0;z-index:1500;}
+  @keyframes twinkle{0%,100%{opacity:0;transform:scale(0.5)}50%{opacity:1;transform:scale(1)}}
+
+  @media(max-width:500px){
+    .reward-grid{grid-template-columns:1fr 1fr;}
+    .wrapper{padding:16px 12px 100px;}
+  }
+</style>
+</head>
+<body>
+<div class="cloud cloud-1" style="left:-150px"></div>
+<div class="cloud cloud-2" style="left:-100px"></div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Level-up overlay -->
+<div class="levelup-overlay" id="levelup-overlay">
+  <div class="levelup-card">
+    <span class="big-emoji">🎉</span>
+    <div class="lu-title">Level Up!</div>
+    <div class="lu-name" id="lu-level-name"></div>
+    <button class="lu-btn" onclick="closeLevelUp()">Awesome!</button>
+  </div>
+</div>
+
+<div class="wrapper">
+  <header>
+    <div class="title">Lucas's <span>Day</span>!</div>
+    <div class="date-line" id="date-line"></div>
+  </header>
+
+  <!-- ═══ BOARD VIEW ═══ -->
+  <div class="view active" id="board-view">
+    <!-- Level + XP -->
+    <div class="level-section">
+      <div class="level-badge">
+        <div class="level-circle" id="level-num">1</div>
+        <div class="level-name" id="level-name-display">Star Starter</div>
+      </div>
+      <div class="xp-bar-wrap">
+        <div class="xp-bar-fill" id="xp-bar" style="width:0%"></div>
+      </div>
+      <div class="xp-label" id="xp-label">0 / 10 XP to next level</div>
+      <div class="star-balance" id="star-balance-display"></div>
+    </div>
+
+    <!-- All-done banner -->
+    <div class="all-done-banner" id="all-done-banner">
+      <span class="big-emoji">🎊</span>
+      <div class="done-text">All daily tasks done! Amazing!</div>
+    </div>
+
+    <!-- Daily tasks -->
+    <div class="section-label">Daily Tasks</div>
+    <div id="daily-tasks-container"></div>
+
+    <!-- Active bonuses -->
+    <div id="active-bonuses-section" style="display:none;">
+      <div class="section-label">Bonus Tasks</div>
+      <div id="active-bonuses-container"></div>
+    </div>
+
+    <!-- Bonus toggle -->
+    <div class="bonus-toggle" id="bonus-toggle" onclick="toggleBonusMenu()">Want to earn more? ⭐</div>
+    <div class="bonus-menu" id="bonus-menu"></div>
+  </div>
+
+  <!-- ═══ SHOP VIEW ═══ -->
+  <div class="view" id="shop-view">
+    <div class="shop-header">
+      <button class="back-btn" onclick="showView('board')">← Back</button>
+      <div class="shop-title">Reward Shop</div>
+      <div class="shop-stars" id="shop-stars"></div>
+    </div>
+    <div class="reward-grid" id="reward-grid"></div>
+  </div>
+
+  <!-- ═══ PARENT VIEW ═══ -->
+  <div class="view" id="parent-view">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <button class="back-btn" onclick="showView('board')">← Back</button>
+      <div class="shop-title" style="color:var(--purple);">Parent Setup</div>
+      <div></div>
+    </div>
+
+    <!-- Daily tasks editor -->
+    <div class="parent-panel">
+      <div class="parent-title">Daily Tasks</div>
+      <div id="edit-daily-tasks"></div>
+      <button class="add-task-btn" onclick="addDailyTask()">+ Add daily task</button>
+    </div>
+
+    <!-- Bonus menu editor -->
+    <div class="parent-panel">
+      <div class="parent-title">Bonus Menu</div>
+      <div id="edit-bonus-menu"></div>
+      <button class="add-task-btn" onclick="addBonusMenuItem()">+ Add bonus task</button>
+    </div>
+
+    <!-- Rewards editor -->
+    <div class="parent-panel">
+      <div class="parent-title">Rewards</div>
+      <div id="edit-rewards"></div>
+      <button class="add-task-btn" onclick="addReward()">+ Add reward</button>
+    </div>
+
+    <!-- Level config -->
+    <div class="parent-panel">
+      <div class="parent-title">Level Thresholds</div>
+      <div id="edit-levels"></div>
+    </div>
+
+    <!-- Controls -->
+    <div class="parent-panel">
+      <div class="parent-title">Controls</div>
+      <div class="star-adjust">
+        <label>Set star balance:</label>
+        <input type="number" id="adjust-stars-input" min="0">
+        <button onclick="adjustStars()">Set</button>
+      </div>
+      <div class="parent-controls" style="margin-top:12px;">
+        <button class="ctrl-btn danger" onclick="resetToday()">Reset today's tasks</button>
+        <button class="ctrl-btn danger" onclick="resetAllData()">Reset all data</button>
+      </div>
+    </div>
+
+    <button class="back-btn" style="width:100%;padding:12px;margin-top:8px;font-size:0.95rem;" onclick="saveParentChanges()">Save & Back to Board</button>
+  </div>
+</div>
+
+<!-- Bottom bar -->
+<div class="bottom-bar">
+  <button class="bottom-btn shop-btn" onclick="showView('shop')">🏆 Reward Shop</button>
+  <button class="bottom-btn parent-btn" onclick="showView('parent')">⚙️ Parent</button>
+</div>
+
+<script>
+// ── Default data ──────────────────────────────────
+const DEFAULTS = {
+  dailyTasks: [
+    {id:1, emoji:'🦷', name:'Brush teeth', stars:1, done:false},
+    {id:2, emoji:'🎒', name:'Pack school bag', stars:1, done:false},
+    {id:3, emoji:'📚', name:'Read for 10 minutes', stars:2, done:false},
+    {id:4, emoji:'🧹', name:'Tidy your room', stars:2, done:false},
+  ],
+  bonusMenu: [
+    {id:100, emoji:'🐾', name:'Help with pets', stars:2},
+    {id:101, emoji:'🍽️', name:'Set the table', stars:1},
+    {id:102, emoji:'🧺', name:'Put away laundry', stars:2},
+    {id:103, emoji:'✏️', name:'Extra maths practice', stars:3},
+  ],
+  activeBonuses: [],
+  currentStars: 0,
+  totalEarned: 0,
+  totalSpent: 0,
+  levels: [
+    {name:'Star Starter', xp:0},
+    {name:'Rising Star', xp:10},
+    {name:'Super Helper', xp:25},
+    {name:'Task Master', xp:50},
+    {name:'Legend', xp:100},
+  ],
+  rewards: [
+    {id:200, emoji:'📖', name:'Audible story', cost:3},
+    {id:201, emoji:'🍫', name:'Chocolate treat', cost:4},
+    {id:202, emoji:'🎮', name:'30 min gaming', cost:5},
+    {id:203, emoji:'🎬', name:'Movie night', cost:8},
+  ],
+  lastDate: '',
+  nextId: 300,
+};
+
+const STORAGE_KEY = 'lh_todos_v1';
+let state;
+
+// ── Persistence ───────────────────────────────────
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      state = JSON.parse(raw);
+      // Ensure all keys exist (forward-compat)
+      for (const k of Object.keys(DEFAULTS)) {
+        if (!(k in state)) state[k] = JSON.parse(JSON.stringify(DEFAULTS[k]));
+      }
+    } else {
+      state = JSON.parse(JSON.stringify(DEFAULTS));
+    }
+  } catch {
+    state = JSON.parse(JSON.stringify(DEFAULTS));
+  }
+}
+
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+}
+
+// ── Date helpers ──────────────────────────────────
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function formatDateDisplay() {
+  const d = new Date();
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]}`;
+}
+
+function checkDailyReset() {
+  const today = todayStr();
+  if (state.lastDate !== today) {
+    state.dailyTasks.forEach(t => t.done = false);
+    state.activeBonuses = [];
+    state.lastDate = today;
+    saveState();
+  }
+}
+
+// ── Level calculation ─────────────────────────────
+function getCurrentLevel() {
+  let lvl = 0;
+  for (let i = state.levels.length - 1; i >= 0; i--) {
+    if (state.totalEarned >= state.levels[i].xp) { lvl = i; break; }
+  }
+  return lvl;
+}
+
+function getNextLevelXP() {
+  const lvl = getCurrentLevel();
+  if (lvl + 1 < state.levels.length) return state.levels[lvl + 1].xp;
+  return state.levels[lvl].xp; // max level
+}
+
+function getCurrentLevelXP() {
+  return state.levels[getCurrentLevel()].xp;
+}
+
+// ── Rendering ─────────────────────────────────────
+function renderBoard() {
+  // Date
+  document.getElementById('date-line').textContent = formatDateDisplay();
+
+  // Level
+  const lvl = getCurrentLevel();
+  document.getElementById('level-num').textContent = lvl + 1;
+  document.getElementById('level-name-display').textContent = state.levels[lvl].name;
+
+  // XP bar
+  const curXP = state.levels[lvl].xp;
+  const nextXP = getNextLevelXP();
+  const isMaxLevel = lvl === state.levels.length - 1;
+  if (isMaxLevel) {
+    document.getElementById('xp-bar').style.width = '100%';
+    document.getElementById('xp-label').textContent = `${state.totalEarned} XP — Max Level!`;
+  } else {
+    const progress = (state.totalEarned - curXP) / (nextXP - curXP);
+    document.getElementById('xp-bar').style.width = `${Math.min(100, progress * 100)}%`;
+    document.getElementById('xp-label').textContent = `${state.totalEarned} / ${nextXP} XP to Level ${lvl + 2}`;
+  }
+
+  // Star balance
+  document.getElementById('star-balance-display').textContent = `⭐ ${state.currentStars} stars`;
+
+  // Daily tasks
+  const dailyContainer = document.getElementById('daily-tasks-container');
+  dailyContainer.innerHTML = '';
+  state.dailyTasks.forEach((t, i) => {
+    dailyContainer.innerHTML += taskCardHTML(t, 'daily', i);
+  });
+
+  // Active bonuses
+  const bonusSection = document.getElementById('active-bonuses-section');
+  const bonusContainer = document.getElementById('active-bonuses-container');
+  if (state.activeBonuses.length > 0) {
+    bonusSection.style.display = 'block';
+    bonusContainer.innerHTML = '';
+    state.activeBonuses.forEach((t, i) => {
+      bonusContainer.innerHTML += taskCardHTML(t, 'bonus', i);
+    });
+  } else {
+    bonusSection.style.display = 'none';
+  }
+
+  // Bonus menu
+  renderBonusMenu();
+
+  // All-done check
+  const allDailyDone = state.dailyTasks.length > 0 && state.dailyTasks.every(t => t.done);
+  const banner = document.getElementById('all-done-banner');
+  if (allDailyDone) {
+    banner.classList.add('show');
+  } else {
+    banner.classList.remove('show');
+  }
+}
+
+function taskCardHTML(t, type, idx) {
+  const doneClass = t.done ? ' done' : '';
+  const bonusClass = type === 'bonus' ? ' bonus-card' : '';
+  const checkIcon = t.done ? '✓' : '';
+  return `<div class="task-card${doneClass}${bonusClass}" id="task-${type}-${idx}" onclick="completeTask('${type}',${idx},this)">
+    <span class="task-emoji">${t.emoji}</span>
+    <div class="task-info">
+      <div class="task-name">${t.name}</div>
+      <div class="task-stars">${'⭐'.repeat(t.stars)} +${t.stars}</div>
+    </div>
+    <div class="check-btn">${checkIcon}</div>
+  </div>`;
+}
+
+function renderBonusMenu() {
+  const menu = document.getElementById('bonus-menu');
+  const activeIds = new Set(state.activeBonuses.map(b => b.id));
+  const available = state.bonusMenu.filter(b => !activeIds.has(b.id));
+
+  if (available.length === 0) {
+    document.getElementById('bonus-toggle').style.display = 'none';
+    menu.innerHTML = '';
+    return;
+  }
+  document.getElementById('bonus-toggle').style.display = 'block';
+
+  menu.innerHTML = available.map(b => `
+    <div class="bonus-pick-card">
+      <span class="task-emoji">${b.emoji}</span>
+      <div class="task-info">
+        <div class="task-name">${b.name}</div>
+        <div class="task-stars">${'⭐'.repeat(b.stars)} +${b.stars}</div>
+      </div>
+      <button class="add-bonus-btn" onclick="event.stopPropagation();pickBonus(${b.id})">+</button>
+    </div>
+  `).join('');
+}
+
+function renderShop() {
+  document.getElementById('shop-stars').textContent = `⭐ ${state.currentStars}`;
+  const grid = document.getElementById('reward-grid');
+  grid.innerHTML = state.rewards.map(r => {
+    const canAfford = state.currentStars >= r.cost;
+    const btnClass = canAfford ? 'can-afford' : 'cant-afford';
+    const btnText = canAfford ? 'Get this!' : `Need ${r.cost - state.currentStars} more ⭐`;
+    return `<div class="reward-card">
+      <span class="reward-emoji">${r.emoji}</span>
+      <div class="reward-name">${r.name}</div>
+      <div class="reward-cost">${'⭐'.repeat(r.cost)} ${r.cost}</div>
+      <button class="redeem-btn ${btnClass}" onclick="${canAfford ? `redeemReward(${r.id})` : ''}">${btnText}</button>
+    </div>`;
+  }).join('');
+}
+
+// ── Actions ───────────────────────────────────────
+function completeTask(type, idx, cardEl) {
+  const list = type === 'daily' ? state.dailyTasks : state.activeBonuses;
+  const task = list[idx];
+  if (!task || task.done) return;
+
+  const prevLevel = getCurrentLevel();
+
+  task.done = true;
+  state.currentStars += task.stars;
+  state.totalEarned += task.stars;
+  saveState();
+
+  // Star burst animation
+  starBurst(cardEl);
+
+  // Check level-up
+  const newLevel = getCurrentLevel();
+  if (newLevel > prevLevel) {
+    setTimeout(() => showLevelUp(newLevel), 600);
+  }
+
+  // Check all daily done
+  const allDailyDone = state.dailyTasks.every(t => t.done);
+  if (allDailyDone && type === 'daily') {
+    setTimeout(() => {
+      launchConfetti();
+    }, 400);
+  }
+
+  renderBoard();
+}
+
+function starBurst(cardEl) {
+  const emojis = ['⭐','🌟','✨'];
+  for (let i = 0; i < 6; i++) {
+    const star = document.createElement('span');
+    star.className = 'star-burst';
+    star.textContent = emojis[i % emojis.length];
+    const angle = (i / 6) * Math.PI * 2;
+    const dist = 40 + Math.random() * 30;
+    star.style.setProperty('--bx', `${Math.cos(angle) * dist}px`);
+    star.style.setProperty('--by', `${Math.sin(angle) * dist}px`);
+    star.style.left = '50%';
+    star.style.top = '50%';
+    cardEl.appendChild(star);
+    setTimeout(() => star.remove(), 700);
+  }
+}
+
+function toggleBonusMenu() {
+  const menu = document.getElementById('bonus-menu');
+  menu.classList.toggle('open');
+  const toggle = document.getElementById('bonus-toggle');
+  toggle.textContent = menu.classList.contains('open') ? 'Hide bonus tasks ⭐' : 'Want to earn more? ⭐';
+}
+
+function pickBonus(id) {
+  const item = state.bonusMenu.find(b => b.id === id);
+  if (!item) return;
+  state.activeBonuses.push({id: item.id, emoji: item.emoji, name: item.name, stars: item.stars, done: false});
+  saveState();
+  renderBoard();
+  showToast(`${item.emoji} ${item.name} added!`);
+}
+
+function redeemReward(id) {
+  const reward = state.rewards.find(r => r.id === id);
+  if (!reward || state.currentStars < reward.cost) return;
+  state.currentStars -= reward.cost;
+  state.totalSpent += reward.cost;
+  saveState();
+  renderShop();
+  renderBoard();
+  showToast(`${reward.emoji} ${reward.name} redeemed!`);
+}
+
+// ── Level up ──────────────────────────────────────
+function showLevelUp(lvl) {
+  launchConfetti();
+  document.getElementById('lu-level-name').textContent = `You're now a ${state.levels[lvl].name}!`;
+  document.getElementById('levelup-overlay').classList.add('show');
+}
+
+function closeLevelUp() {
+  document.getElementById('levelup-overlay').classList.remove('show');
+}
+
+// ── Confetti ──────────────────────────────────────
+function launchConfetti() {
+  const colors = ['#FF6B6B','#6BCB77','#4D96FF','#C77DFF','#FFD93D'];
+  for (let i = 0; i < 40; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.left = `${Math.random() * 100}vw`;
+    piece.style.top = '-10px';
+    piece.style.width = `${8 + Math.random() * 6}px`;
+    piece.style.height = `${8 + Math.random() * 6}px`;
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    piece.style.animationDuration = `${1.5 + Math.random() * 2}s`;
+    piece.style.animationDelay = `${Math.random() * 0.5}s`;
+    document.body.appendChild(piece);
+    setTimeout(() => piece.remove(), 4000);
+  }
+  // Also launch star particles
+  ['⭐','🌟','✨','🎉','🎊'].forEach(e => {
+    for (let i = 0; i < 3; i++) {
+      const s = document.createElement('div');
+      s.className = 'star-particle';
+      s.textContent = e;
+      s.style.cssText = `left:${Math.random()*100}vw;top:${Math.random()*100}vh;font-size:${1.2+Math.random()*2}rem;animation-delay:${Math.random()*2.5}s;animation-duration:${1.5+Math.random()}s`;
+      document.body.appendChild(s);
+      setTimeout(() => s.remove(), 5000);
+    }
+  });
+}
+
+// ── Toast ─────────────────────────────────────────
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ── View navigation ───────────────────────────────
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(`${name}-view`).classList.add('active');
+  if (name === 'shop') renderShop();
+  if (name === 'parent') renderParentSetup();
+  if (name === 'board') renderBoard();
+}
+
+// ── Parent Setup ──────────────────────────────────
+function renderParentSetup() {
+  // Daily tasks
+  const dailyEl = document.getElementById('edit-daily-tasks');
+  dailyEl.innerHTML = state.dailyTasks.map((t, i) => `
+    <div class="task-edit-row">
+      <input class="emoji-input" value="${t.emoji}" data-field="daily-emoji-${i}">
+      <input class="name-input" value="${escHTML(t.name)}" data-field="daily-name-${i}">
+      <input class="stars-input" type="number" value="${t.stars}" min="1" max="10" data-field="daily-stars-${i}">
+      <span style="font-size:0.75rem;color:#8aaabf;">⭐</span>
+      <button class="remove-task-btn" onclick="removeDailyTask(${i})">×</button>
+    </div>
+  `).join('');
+
+  // Bonus menu
+  const bonusEl = document.getElementById('edit-bonus-menu');
+  bonusEl.innerHTML = state.bonusMenu.map((t, i) => `
+    <div class="task-edit-row">
+      <input class="emoji-input" value="${t.emoji}" data-field="bonus-emoji-${i}">
+      <input class="name-input" value="${escHTML(t.name)}" data-field="bonus-name-${i}">
+      <input class="stars-input" type="number" value="${t.stars}" min="1" max="10" data-field="bonus-stars-${i}">
+      <span style="font-size:0.75rem;color:#8aaabf;">⭐</span>
+      <button class="remove-task-btn" onclick="removeBonusMenuItem(${i})">×</button>
+    </div>
+  `).join('');
+
+  // Rewards
+  const rewardsEl = document.getElementById('edit-rewards');
+  rewardsEl.innerHTML = state.rewards.map((r, i) => `
+    <div class="task-edit-row">
+      <input class="emoji-input" value="${r.emoji}" data-field="reward-emoji-${i}">
+      <input class="name-input" value="${escHTML(r.name)}" data-field="reward-name-${i}">
+      <input class="stars-input" type="number" value="${r.cost}" min="1" max="100" data-field="reward-cost-${i}">
+      <span style="font-size:0.75rem;color:#8aaabf;">⭐</span>
+      <button class="remove-task-btn" onclick="removeReward(${i})">×</button>
+    </div>
+  `).join('');
+
+  // Levels
+  const levelsEl = document.getElementById('edit-levels');
+  levelsEl.innerHTML = state.levels.map((l, i) => `
+    <div class="task-edit-row">
+      <span style="font-weight:700;font-size:0.85rem;color:#6b8cae;width:20px;">${i+1}</span>
+      <input class="name-input" value="${escHTML(l.name)}" data-field="level-name-${i}">
+      <input class="stars-input" type="number" value="${l.xp}" min="0" data-field="level-xp-${i}" ${i===0?'disabled':''}>
+      <span style="font-size:0.75rem;color:#8aaabf;">XP</span>
+    </div>
+  `).join('');
+
+  // Star balance input
+  document.getElementById('adjust-stars-input').value = state.currentStars;
+}
+
+function escHTML(s) { return s.replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+
+function readParentInputs() {
+  // Read daily tasks
+  state.dailyTasks.forEach((t, i) => {
+    const emoji = document.querySelector(`[data-field="daily-emoji-${i}"]`);
+    const name = document.querySelector(`[data-field="daily-name-${i}"]`);
+    const stars = document.querySelector(`[data-field="daily-stars-${i}"]`);
+    if (emoji) t.emoji = emoji.value;
+    if (name) t.name = name.value;
+    if (stars) t.stars = Math.max(1, parseInt(stars.value) || 1);
+  });
+
+  // Read bonus menu
+  state.bonusMenu.forEach((t, i) => {
+    const emoji = document.querySelector(`[data-field="bonus-emoji-${i}"]`);
+    const name = document.querySelector(`[data-field="bonus-name-${i}"]`);
+    const stars = document.querySelector(`[data-field="bonus-stars-${i}"]`);
+    if (emoji) t.emoji = emoji.value;
+    if (name) t.name = name.value;
+    if (stars) t.stars = Math.max(1, parseInt(stars.value) || 1);
+  });
+
+  // Read rewards
+  state.rewards.forEach((r, i) => {
+    const emoji = document.querySelector(`[data-field="reward-emoji-${i}"]`);
+    const name = document.querySelector(`[data-field="reward-name-${i}"]`);
+    const cost = document.querySelector(`[data-field="reward-cost-${i}"]`);
+    if (emoji) r.emoji = emoji.value;
+    if (name) r.name = name.value;
+    if (cost) r.cost = Math.max(1, parseInt(cost.value) || 1);
+  });
+
+  // Read levels
+  state.levels.forEach((l, i) => {
+    const name = document.querySelector(`[data-field="level-name-${i}"]`);
+    const xp = document.querySelector(`[data-field="level-xp-${i}"]`);
+    if (name) l.name = name.value;
+    if (xp && i > 0) l.xp = Math.max(0, parseInt(xp.value) || 0);
+  });
+}
+
+function saveParentChanges() {
+  readParentInputs();
+  saveState();
+  showView('board');
+  showToast('Settings saved!');
+}
+
+function addDailyTask() {
+  readParentInputs();
+  state.dailyTasks.push({id: state.nextId++, emoji:'📌', name:'New task', stars:1, done:false});
+  saveState();
+  renderParentSetup();
+}
+
+function removeDailyTask(i) {
+  readParentInputs();
+  state.dailyTasks.splice(i, 1);
+  saveState();
+  renderParentSetup();
+}
+
+function addBonusMenuItem() {
+  readParentInputs();
+  state.bonusMenu.push({id: state.nextId++, emoji:'🌟', name:'New bonus', stars:1});
+  saveState();
+  renderParentSetup();
+}
+
+function removeBonusMenuItem(i) {
+  readParentInputs();
+  state.bonusMenu.splice(i, 1);
+  saveState();
+  renderParentSetup();
+}
+
+function addReward() {
+  readParentInputs();
+  state.rewards.push({id: state.nextId++, emoji:'🎁', name:'New reward', cost:5});
+  saveState();
+  renderParentSetup();
+}
+
+function removeReward(i) {
+  readParentInputs();
+  state.rewards.splice(i, 1);
+  saveState();
+  renderParentSetup();
+}
+
+function adjustStars() {
+  const val = parseInt(document.getElementById('adjust-stars-input').value);
+  if (!isNaN(val) && val >= 0) {
+    state.currentStars = val;
+    saveState();
+    showToast(`Stars set to ${val}`);
+  }
+}
+
+function resetToday() {
+  if (confirm('Reset all tasks for today? Stars and level will be kept.')) {
+    state.dailyTasks.forEach(t => t.done = false);
+    state.activeBonuses = [];
+    saveState();
+    renderParentSetup();
+    showToast('Today\'s tasks reset');
+  }
+}
+
+function resetAllData() {
+  if (confirm('This will erase ALL data including stars and levels. Are you sure?')) {
+    state = JSON.parse(JSON.stringify(DEFAULTS));
+    state.lastDate = todayStr();
+    saveState();
+    renderParentSetup();
+    showToast('All data reset');
+  }
+}
+
+// ── Init ──────────────────────────────────────────
+loadState();
+checkDailyReset();
+renderBoard();
+</script>
+</body>
+</html>

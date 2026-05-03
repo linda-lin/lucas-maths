@@ -57,6 +57,30 @@
   .check-btn:hover{border-color:var(--mint);transform:scale(1.1);}
   .task-card.done .check-btn{background:var(--mint);border-color:var(--mint);color:white;}
 
+  /* Parent verify button */
+  .parent-check-btn{width:34px;height:34px;border-radius:10px;border:2px solid #e0d4ee;background:white;font-size:0.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;flex-shrink:0;}
+  .parent-check-btn:hover{border-color:var(--purple);transform:scale(1.05);}
+  .parent-check-btn.checked{background:var(--purple);border-color:var(--purple);color:white;}
+  .task-card.parent-verified{box-shadow:0 3px 12px rgba(199,125,255,0.18);}
+
+  /* Undo button on done tasks */
+  .undo-btn{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;border:none;background:rgba(255,107,107,0.15);color:var(--coral);font-size:0.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:800;line-height:1;}
+  .undo-btn:hover{background:var(--coral);color:white;transform:scale(1.1);}
+
+  /* Config banner */
+  .config-banner{background:#fff8e1;border-left:4px solid var(--sun);border-radius:14px;padding:12px 16px;margin-bottom:16px;font-size:0.85rem;line-height:1.5;color:#7a5e00;}
+  .config-banner code{background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:4px;font-size:0.85em;}
+
+  /* History list */
+  .history-row{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid #f0f4f8;font-size:0.88rem;}
+  .history-row:last-child{border-bottom:none;}
+  .hist-icon{font-size:1.1rem;}
+  .hist-body{min-width:0;}
+  .hist-label{font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .hist-date{font-size:0.72rem;color:#8aaabf;}
+  .hist-amount{font-weight:800;font-size:0.92rem;}
+  .hist-balance{font-size:0.78rem;color:#8aaabf;font-weight:700;min-width:38px;text-align:right;}
+
   /* Star burst animation */
   .star-burst{position:absolute;pointer-events:none;font-size:1.4rem;animation:burstOut 0.7s ease-out forwards;}
   @keyframes burstOut{
@@ -242,6 +266,10 @@
       <div></div>
     </div>
 
+    <div class="config-banner">
+      <strong>📂 Settings load from <code>lh-todos-config.json</code></strong> on every page load. Edit below to apply for this session, then click <strong>💾 Download config.json</strong> and replace the file in your repo to make changes permanent.
+    </div>
+
     <!-- Daily tasks editor -->
     <div class="parent-panel">
       <div class="parent-title">Daily Tasks</div>
@@ -278,12 +306,29 @@
         <button onclick="adjustStars()">Set</button>
       </div>
       <div class="parent-controls" style="margin-top:12px;">
+        <button class="ctrl-btn" onclick="showView('history')">📜 View history</button>
         <button class="ctrl-btn danger" onclick="resetToday()">Reset today's tasks</button>
         <button class="ctrl-btn danger" onclick="resetAllData()">Reset all data</button>
       </div>
     </div>
 
-    <button class="back-btn" style="width:100%;padding:12px;margin-top:8px;font-size:0.95rem;" onclick="saveParentChanges()">Save & Back to Board</button>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="back-btn" style="flex:1;padding:12px;font-size:0.92rem;border-color:var(--sun);color:#7a5e00;" onclick="downloadConfig()">💾 Download config.json</button>
+      <button class="back-btn" style="flex:1;padding:12px;font-size:0.92rem;" onclick="saveParentChanges()">Save & Back</button>
+    </div>
+  </div>
+
+  <!-- ═══ HISTORY VIEW ═══ -->
+  <div class="view" id="history-view">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <button class="back-btn" onclick="showView('parent')">← Back</button>
+      <div class="shop-title" style="color:var(--purple);">Star History</div>
+      <button class="back-btn" onclick="exportHistory()">⬇ Export</button>
+    </div>
+    <div class="parent-panel">
+      <div id="history-summary"></div>
+      <div id="history-list"></div>
+    </div>
   </div>
 </div>
 
@@ -294,13 +339,13 @@
 </div>
 
 <script>
-// ── Default data ──────────────────────────────────
-const DEFAULTS = {
+// ── Embedded fallback config (used if fetch fails — e.g. opened via file://) ──
+const FALLBACK_CONFIG = {
   dailyTasks: [
-    {id:1, emoji:'🦷', name:'Brush teeth', stars:1, done:false},
-    {id:2, emoji:'🎒', name:'Pack school bag', stars:1, done:false},
-    {id:3, emoji:'📚', name:'Read for 10 minutes', stars:2, done:false},
-    {id:4, emoji:'🧹', name:'Tidy your room', stars:2, done:false},
+    {id:1, emoji:'🦷', name:'Brush teeth', stars:1},
+    {id:2, emoji:'🎒', name:'Pack school bag', stars:1},
+    {id:3, emoji:'📚', name:'Read for 10 minutes', stars:2},
+    {id:4, emoji:'🧹', name:'Tidy your room', stars:2},
   ],
   bonusMenu: [
     {id:100, emoji:'🐾', name:'Help with pets', stars:2},
@@ -308,10 +353,12 @@ const DEFAULTS = {
     {id:102, emoji:'🧺', name:'Put away laundry', stars:2},
     {id:103, emoji:'✏️', name:'Extra maths practice', stars:3},
   ],
-  activeBonuses: [],
-  currentStars: 0,
-  totalEarned: 0,
-  totalSpent: 0,
+  rewards: [
+    {id:200, emoji:'📖', name:'Audible story', cost:3},
+    {id:201, emoji:'🍫', name:'Chocolate treat', cost:4},
+    {id:202, emoji:'🎮', name:'30 min gaming', cost:5},
+    {id:203, emoji:'🎬', name:'Movie night', cost:8},
+  ],
   levels: [
     {name:'Star Starter', xp:0},
     {name:'Rising Star', xp:10},
@@ -319,39 +366,93 @@ const DEFAULTS = {
     {name:'Task Master', xp:50},
     {name:'Legend', xp:100},
   ],
-  rewards: [
-    {id:200, emoji:'📖', name:'Audible story', cost:3},
-    {id:201, emoji:'🍫', name:'Chocolate treat', cost:4},
-    {id:202, emoji:'🎮', name:'30 min gaming', cost:5},
-    {id:203, emoji:'🎬', name:'Movie night', cost:8},
-  ],
-  lastDate: '',
   nextId: 300,
 };
 
-const STORAGE_KEY = 'lh_todos_v1';
-let state;
+const PROGRESS_DEFAULTS = {
+  currentStars: 0,
+  totalEarned: 0,
+  totalSpent: 0,
+  doneIds: [],
+  parentCheckedIds: [],
+  activeBonuses: [],
+  history: [],
+  lastDate: '',
+};
+
+const PROGRESS_KEY = 'lh_todos_progress_v2';
+const CONFIG_CACHE_KEY = 'lh_todos_config_cache_v1';
+
+let config;      // {dailyTasks, bonusMenu, rewards, levels, nextId} — loaded from JSON file
+let progress;    // user state — lives in localStorage
+let editConfig;  // working copy used by parent panel
 
 // ── Persistence ───────────────────────────────────
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      state = JSON.parse(raw);
-      // Ensure all keys exist (forward-compat)
-      for (const k of Object.keys(DEFAULTS)) {
-        if (!(k in state)) state[k] = JSON.parse(JSON.stringify(DEFAULTS[k]));
-      }
-    } else {
-      state = JSON.parse(JSON.stringify(DEFAULTS));
-    }
-  } catch {
-    state = JSON.parse(JSON.stringify(DEFAULTS));
-  }
+function sanitizeConfig(c) {
+  return {
+    dailyTasks: Array.isArray(c.dailyTasks) ? c.dailyTasks : FALLBACK_CONFIG.dailyTasks,
+    bonusMenu:  Array.isArray(c.bonusMenu)  ? c.bonusMenu  : FALLBACK_CONFIG.bonusMenu,
+    rewards:    Array.isArray(c.rewards)    ? c.rewards    : FALLBACK_CONFIG.rewards,
+    levels:     (Array.isArray(c.levels) && c.levels.length > 0) ? c.levels : FALLBACK_CONFIG.levels,
+    nextId:     typeof c.nextId === 'number' ? c.nextId : 300,
+  };
 }
 
-function saveState() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+async function loadConfig() {
+  // Try the repo file (works on GitHub Pages / any HTTP host)
+  try {
+    const r = await fetch('lh-todos-config.json', {cache:'no-store'});
+    if (r.ok) {
+      const c = await r.json();
+      config = sanitizeConfig(c);
+      try { localStorage.setItem(CONFIG_CACHE_KEY, JSON.stringify(config)); } catch {}
+      return;
+    }
+  } catch {}
+  // Fall back to last-known-good cache (e.g. offline)
+  try {
+    const cached = localStorage.getItem(CONFIG_CACHE_KEY);
+    if (cached) { config = sanitizeConfig(JSON.parse(cached)); return; }
+  } catch {}
+  // Last resort: embedded defaults (covers file:// opens)
+  config = JSON.parse(JSON.stringify(FALLBACK_CONFIG));
+}
+
+function loadProgress() {
+  try {
+    const raw = localStorage.getItem(PROGRESS_KEY);
+    if (raw) {
+      progress = JSON.parse(raw);
+      for (const k of Object.keys(PROGRESS_DEFAULTS)) {
+        if (!(k in progress)) progress[k] = JSON.parse(JSON.stringify(PROGRESS_DEFAULTS[k]));
+      }
+      return;
+    }
+  } catch {}
+  progress = JSON.parse(JSON.stringify(PROGRESS_DEFAULTS));
+
+  // One-time migration from v1 storage (preserve stars/level)
+  try {
+    const oldRaw = localStorage.getItem('lh_todos_v1');
+    if (oldRaw) {
+      const old = JSON.parse(oldRaw);
+      progress.currentStars = old.currentStars || 0;
+      progress.totalEarned  = old.totalEarned  || 0;
+      progress.totalSpent   = old.totalSpent   || 0;
+      progress.lastDate     = old.lastDate     || '';
+      if (Array.isArray(old.dailyTasks)) {
+        progress.doneIds = old.dailyTasks.filter(t => t && t.done).map(t => t.id);
+      }
+      if (Array.isArray(old.activeBonuses)) {
+        progress.activeBonuses = old.activeBonuses.map(b => ({...b, parentChecked:false}));
+      }
+      saveProgress();
+    }
+  } catch {}
+}
+
+function saveProgress() {
+  try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress)); } catch {}
 }
 
 // ── Date helpers ──────────────────────────────────
@@ -369,110 +470,119 @@ function formatDateDisplay() {
 
 function checkDailyReset() {
   const today = todayStr();
-  if (state.lastDate !== today) {
-    state.dailyTasks.forEach(t => t.done = false);
-    state.activeBonuses = [];
-    state.lastDate = today;
-    saveState();
+  if (progress.lastDate !== today) {
+    progress.doneIds = [];
+    progress.parentCheckedIds = [];
+    progress.activeBonuses = [];
+    progress.lastDate = today;
+    saveProgress();
   }
 }
 
 // ── Level calculation ─────────────────────────────
 function getCurrentLevel() {
   let lvl = 0;
-  for (let i = state.levels.length - 1; i >= 0; i--) {
-    if (state.totalEarned >= state.levels[i].xp) { lvl = i; break; }
+  for (let i = config.levels.length - 1; i >= 0; i--) {
+    if (progress.totalEarned >= config.levels[i].xp) { lvl = i; break; }
   }
   return lvl;
 }
 
 function getNextLevelXP() {
   const lvl = getCurrentLevel();
-  if (lvl + 1 < state.levels.length) return state.levels[lvl + 1].xp;
-  return state.levels[lvl].xp; // max level
+  if (lvl + 1 < config.levels.length) return config.levels[lvl + 1].xp;
+  return config.levels[lvl].xp;
 }
 
-function getCurrentLevelXP() {
-  return state.levels[getCurrentLevel()].xp;
+// ── History ───────────────────────────────────────
+function pushHistory(entry) {
+  if (!Array.isArray(progress.history)) progress.history = [];
+  progress.history.unshift({ ts: Date.now(), balanceAfter: progress.currentStars, ...entry });
+  if (progress.history.length > 200) progress.history.length = 200;
 }
+
+// ── Escaping ──────────────────────────────────────
+function escHTML(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escAttr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 
 // ── Rendering ─────────────────────────────────────
 function renderBoard() {
-  // Date
   document.getElementById('date-line').textContent = formatDateDisplay();
 
-  // Level
   const lvl = getCurrentLevel();
   document.getElementById('level-num').textContent = lvl + 1;
-  document.getElementById('level-name-display').textContent = state.levels[lvl].name;
+  document.getElementById('level-name-display').textContent = config.levels[lvl].name;
 
-  // XP bar
-  const curXP = state.levels[lvl].xp;
+  const curXP = config.levels[lvl].xp;
   const nextXP = getNextLevelXP();
-  const isMaxLevel = lvl === state.levels.length - 1;
+  const isMaxLevel = lvl === config.levels.length - 1;
   if (isMaxLevel) {
     document.getElementById('xp-bar').style.width = '100%';
-    document.getElementById('xp-label').textContent = `${state.totalEarned} XP — Max Level!`;
+    document.getElementById('xp-label').textContent = `${progress.totalEarned} XP — Max Level!`;
   } else {
-    const progress = (state.totalEarned - curXP) / (nextXP - curXP);
-    document.getElementById('xp-bar').style.width = `${Math.min(100, progress * 100)}%`;
-    document.getElementById('xp-label').textContent = `${state.totalEarned} / ${nextXP} XP to Level ${lvl + 2}`;
+    const prog = (progress.totalEarned - curXP) / (nextXP - curXP);
+    document.getElementById('xp-bar').style.width = `${Math.min(100, prog * 100)}%`;
+    document.getElementById('xp-label').textContent = `${progress.totalEarned} / ${nextXP} XP to Level ${lvl + 2}`;
   }
 
-  // Star balance
-  document.getElementById('star-balance-display').textContent = `⭐ ${state.currentStars} stars`;
+  document.getElementById('star-balance-display').textContent = `⭐ ${progress.currentStars} stars`;
 
-  // Daily tasks
   const dailyContainer = document.getElementById('daily-tasks-container');
   dailyContainer.innerHTML = '';
-  state.dailyTasks.forEach((t, i) => {
-    dailyContainer.innerHTML += taskCardHTML(t, 'daily', i);
+  config.dailyTasks.forEach((t, i) => {
+    const display = {
+      ...t,
+      done: progress.doneIds.includes(t.id),
+      parentChecked: progress.parentCheckedIds.includes(t.id),
+    };
+    dailyContainer.innerHTML += taskCardHTML(display, 'daily', i);
   });
 
-  // Active bonuses
   const bonusSection = document.getElementById('active-bonuses-section');
   const bonusContainer = document.getElementById('active-bonuses-container');
-  if (state.activeBonuses.length > 0) {
+  if (progress.activeBonuses.length > 0) {
     bonusSection.style.display = 'block';
     bonusContainer.innerHTML = '';
-    state.activeBonuses.forEach((t, i) => {
+    progress.activeBonuses.forEach((t, i) => {
       bonusContainer.innerHTML += taskCardHTML(t, 'bonus', i);
     });
   } else {
     bonusSection.style.display = 'none';
   }
 
-  // Bonus menu
   renderBonusMenu();
 
-  // All-done check
-  const allDailyDone = state.dailyTasks.length > 0 && state.dailyTasks.every(t => t.done);
+  const allDailyDone = config.dailyTasks.length > 0 && config.dailyTasks.every(t => progress.doneIds.includes(t.id));
   const banner = document.getElementById('all-done-banner');
-  if (allDailyDone) {
-    banner.classList.add('show');
-  } else {
-    banner.classList.remove('show');
-  }
+  if (allDailyDone) banner.classList.add('show'); else banner.classList.remove('show');
 }
 
 function taskCardHTML(t, type, idx) {
   const doneClass = t.done ? ' done' : '';
   const bonusClass = type === 'bonus' ? ' bonus-card' : '';
+  const verifiedClass = t.parentChecked ? ' parent-verified' : '';
   const checkIcon = t.done ? '✓' : '';
-  return `<div class="task-card${doneClass}${bonusClass}" id="task-${type}-${idx}" onclick="completeTask('${type}',${idx},this)">
+  const parentIcon = t.parentChecked ? '✓' : '👀';
+  const parentTitle = t.parentChecked ? 'Parent verified — tap to unverify' : 'Parent verify';
+  const undoBtn = t.done
+    ? `<button class="undo-btn" onclick="event.stopPropagation();undoTask('${type}',${idx})" title="Undo">↶</button>`
+    : '';
+  return `<div class="task-card${doneClass}${bonusClass}${verifiedClass}" id="task-${type}-${idx}" onclick="completeTask('${type}',${idx},this)">
     <span class="task-emoji">${t.emoji}</span>
     <div class="task-info">
-      <div class="task-name">${t.name}</div>
+      <div class="task-name">${escHTML(t.name)}</div>
       <div class="task-stars">${'⭐'.repeat(t.stars)} +${t.stars}</div>
     </div>
+    <button class="parent-check-btn${t.parentChecked?' checked':''}" onclick="event.stopPropagation();toggleParentCheck('${type}',${idx})" title="${parentTitle}">${parentIcon}</button>
     <div class="check-btn">${checkIcon}</div>
+    ${undoBtn}
   </div>`;
 }
 
 function renderBonusMenu() {
   const menu = document.getElementById('bonus-menu');
-  const activeIds = new Set(state.activeBonuses.map(b => b.id));
-  const available = state.bonusMenu.filter(b => !activeIds.has(b.id));
+  const activeIds = new Set(progress.activeBonuses.map(b => b.id));
+  const available = config.bonusMenu.filter(b => !activeIds.has(b.id));
 
   if (available.length === 0) {
     document.getElementById('bonus-toggle').style.display = 'none';
@@ -485,7 +595,7 @@ function renderBonusMenu() {
     <div class="bonus-pick-card">
       <span class="task-emoji">${b.emoji}</span>
       <div class="task-info">
-        <div class="task-name">${b.name}</div>
+        <div class="task-name">${escHTML(b.name)}</div>
         <div class="task-stars">${'⭐'.repeat(b.stars)} +${b.stars}</div>
       </div>
       <button class="add-bonus-btn" onclick="event.stopPropagation();pickBonus(${b.id})">+</button>
@@ -494,15 +604,15 @@ function renderBonusMenu() {
 }
 
 function renderShop() {
-  document.getElementById('shop-stars').textContent = `⭐ ${state.currentStars}`;
+  document.getElementById('shop-stars').textContent = `⭐ ${progress.currentStars}`;
   const grid = document.getElementById('reward-grid');
-  grid.innerHTML = state.rewards.map(r => {
-    const canAfford = state.currentStars >= r.cost;
+  grid.innerHTML = config.rewards.map(r => {
+    const canAfford = progress.currentStars >= r.cost;
     const btnClass = canAfford ? 'can-afford' : 'cant-afford';
-    const btnText = canAfford ? 'Get this!' : `Need ${r.cost - state.currentStars} more ⭐`;
+    const btnText = canAfford ? 'Get this!' : `Need ${r.cost - progress.currentStars} more ⭐`;
     return `<div class="reward-card">
       <span class="reward-emoji">${r.emoji}</span>
-      <div class="reward-name">${r.name}</div>
+      <div class="reward-name">${escHTML(r.name)}</div>
       <div class="reward-cost">${'⭐'.repeat(r.cost)} ${r.cost}</div>
       <button class="redeem-btn ${btnClass}" onclick="${canAfford ? `redeemReward(${r.id})` : ''}">${btnText}</button>
     </div>`;
@@ -510,33 +620,92 @@ function renderShop() {
 }
 
 // ── Actions ───────────────────────────────────────
+// Kid taps a card → marks it claimed (no stars yet; stars come from parent verify)
 function completeTask(type, idx, cardEl) {
-  const list = type === 'daily' ? state.dailyTasks : state.activeBonuses;
-  const task = list[idx];
-  if (!task || task.done) return;
+  if (type === 'daily') {
+    const t = config.dailyTasks[idx];
+    if (!t || progress.doneIds.includes(t.id)) return;
+    progress.doneIds.push(t.id);
+  } else {
+    const t = progress.activeBonuses[idx];
+    if (!t || t.done) return;
+    t.done = true;
+  }
+  saveProgress();
+
+  starBurst(cardEl);
+
+  const allDone = config.dailyTasks.every(t => progress.doneIds.includes(t.id));
+  if (allDone && type === 'daily') setTimeout(launchConfetti, 400);
+
+  renderBoard();
+}
+
+// Kid taps undo on a done card → clears claim. If the parent had already verified, retract stars too.
+function undoTask(type, idx) {
+  if (type === 'daily') {
+    const t = config.dailyTasks[idx];
+    if (!t) return;
+    const i = progress.doneIds.indexOf(t.id);
+    if (i < 0) return;
+    progress.doneIds.splice(i, 1);
+    const pi = progress.parentCheckedIds.indexOf(t.id);
+    if (pi >= 0) {
+      progress.parentCheckedIds.splice(pi, 1);
+      progress.currentStars = Math.max(0, progress.currentStars - t.stars);
+      progress.totalEarned  = Math.max(0, progress.totalEarned  - t.stars);
+      pushHistory({kind:'undo', amount:-t.stars, label:`Undo: ${t.emoji} ${t.name}`});
+    }
+  } else {
+    const t = progress.activeBonuses[idx];
+    if (!t || !t.done) return;
+    t.done = false;
+    if (t.parentChecked) {
+      t.parentChecked = false;
+      progress.currentStars = Math.max(0, progress.currentStars - t.stars);
+      progress.totalEarned  = Math.max(0, progress.totalEarned  - t.stars);
+      pushHistory({kind:'undo', amount:-t.stars, label:`Undo: ${t.emoji} ${t.name}`});
+    }
+  }
+  saveProgress();
+  renderBoard();
+  showToast('Task undone');
+}
+
+// Parent verifies → stars awarded. Un-verifies → stars retracted.
+function toggleParentCheck(type, idx) {
+  let task, willCheck;
+  if (type === 'daily') {
+    task = config.dailyTasks[idx];
+    if (!task) return;
+    const i = progress.parentCheckedIds.indexOf(task.id);
+    willCheck = i < 0;
+    if (willCheck) progress.parentCheckedIds.push(task.id);
+    else progress.parentCheckedIds.splice(i, 1);
+  } else {
+    task = progress.activeBonuses[idx];
+    if (!task) return;
+    willCheck = !task.parentChecked;
+    task.parentChecked = willCheck;
+  }
 
   const prevLevel = getCurrentLevel();
 
-  task.done = true;
-  state.currentStars += task.stars;
-  state.totalEarned += task.stars;
-  saveState();
-
-  // Star burst animation
-  starBurst(cardEl);
-
-  // Check level-up
-  const newLevel = getCurrentLevel();
-  if (newLevel > prevLevel) {
-    setTimeout(() => showLevelUp(newLevel), 600);
+  if (willCheck) {
+    progress.currentStars += task.stars;
+    progress.totalEarned  += task.stars;
+    pushHistory({kind:'earn', amount:task.stars, label:`✓ ${task.emoji} ${task.name}`});
+  } else {
+    progress.currentStars = Math.max(0, progress.currentStars - task.stars);
+    progress.totalEarned  = Math.max(0, progress.totalEarned  - task.stars);
+    pushHistory({kind:'undo', amount:-task.stars, label:`Unverify: ${task.emoji} ${task.name}`});
   }
 
-  // Check all daily done
-  const allDailyDone = state.dailyTasks.every(t => t.done);
-  if (allDailyDone && type === 'daily') {
-    setTimeout(() => {
-      launchConfetti();
-    }, 400);
+  saveProgress();
+
+  if (willCheck) {
+    const newLevel = getCurrentLevel();
+    if (newLevel > prevLevel) setTimeout(() => showLevelUp(newLevel), 600);
   }
 
   renderBoard();
@@ -567,20 +736,21 @@ function toggleBonusMenu() {
 }
 
 function pickBonus(id) {
-  const item = state.bonusMenu.find(b => b.id === id);
+  const item = config.bonusMenu.find(b => b.id === id);
   if (!item) return;
-  state.activeBonuses.push({id: item.id, emoji: item.emoji, name: item.name, stars: item.stars, done: false});
-  saveState();
+  progress.activeBonuses.push({id:item.id, emoji:item.emoji, name:item.name, stars:item.stars, done:false, parentChecked:false});
+  saveProgress();
   renderBoard();
   showToast(`${item.emoji} ${item.name} added!`);
 }
 
 function redeemReward(id) {
-  const reward = state.rewards.find(r => r.id === id);
-  if (!reward || state.currentStars < reward.cost) return;
-  state.currentStars -= reward.cost;
-  state.totalSpent += reward.cost;
-  saveState();
+  const reward = config.rewards.find(r => r.id === id);
+  if (!reward || progress.currentStars < reward.cost) return;
+  progress.currentStars -= reward.cost;
+  progress.totalSpent += reward.cost;
+  pushHistory({kind:'spend', amount:-reward.cost, label:`${reward.emoji} ${reward.name}`});
+  saveProgress();
   renderShop();
   renderBoard();
   showToast(`${reward.emoji} ${reward.name} redeemed!`);
@@ -589,7 +759,7 @@ function redeemReward(id) {
 // ── Level up ──────────────────────────────────────
 function showLevelUp(lvl) {
   launchConfetti();
-  document.getElementById('lu-level-name').textContent = `You're now a ${state.levels[lvl].name}!`;
+  document.getElementById('lu-level-name').textContent = `You're now a ${config.levels[lvl].name}!`;
   document.getElementById('levelup-overlay').classList.add('show');
 }
 
@@ -639,101 +809,91 @@ function showToast(msg) {
 function showView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(`${name}-view`).classList.add('active');
-  if (name === 'shop') renderShop();
-  if (name === 'parent') renderParentSetup();
-  if (name === 'board') renderBoard();
+  if (name === 'shop')    renderShop();
+  if (name === 'parent')  { editConfig = JSON.parse(JSON.stringify(config)); renderParentSetup(); }
+  if (name === 'board')   renderBoard();
+  if (name === 'history') renderHistory();
 }
 
 // ── Parent Setup ──────────────────────────────────
 function renderParentSetup() {
-  // Daily tasks
+  if (!editConfig) editConfig = JSON.parse(JSON.stringify(config));
+
   const dailyEl = document.getElementById('edit-daily-tasks');
-  dailyEl.innerHTML = state.dailyTasks.map((t, i) => `
+  dailyEl.innerHTML = editConfig.dailyTasks.map((t, i) => `
     <div class="task-edit-row">
-      <input class="emoji-input" value="${t.emoji}" data-field="daily-emoji-${i}">
-      <input class="name-input" value="${escHTML(t.name)}" data-field="daily-name-${i}">
+      <input class="emoji-input" value="${escAttr(t.emoji)}" data-field="daily-emoji-${i}">
+      <input class="name-input" value="${escAttr(t.name)}" data-field="daily-name-${i}">
       <input class="stars-input" type="number" value="${t.stars}" min="1" max="10" data-field="daily-stars-${i}">
       <span style="font-size:0.75rem;color:#8aaabf;">⭐</span>
       <button class="remove-task-btn" onclick="removeDailyTask(${i})">×</button>
     </div>
   `).join('');
 
-  // Bonus menu
   const bonusEl = document.getElementById('edit-bonus-menu');
-  bonusEl.innerHTML = state.bonusMenu.map((t, i) => `
+  bonusEl.innerHTML = editConfig.bonusMenu.map((t, i) => `
     <div class="task-edit-row">
-      <input class="emoji-input" value="${t.emoji}" data-field="bonus-emoji-${i}">
-      <input class="name-input" value="${escHTML(t.name)}" data-field="bonus-name-${i}">
+      <input class="emoji-input" value="${escAttr(t.emoji)}" data-field="bonus-emoji-${i}">
+      <input class="name-input" value="${escAttr(t.name)}" data-field="bonus-name-${i}">
       <input class="stars-input" type="number" value="${t.stars}" min="1" max="10" data-field="bonus-stars-${i}">
       <span style="font-size:0.75rem;color:#8aaabf;">⭐</span>
       <button class="remove-task-btn" onclick="removeBonusMenuItem(${i})">×</button>
     </div>
   `).join('');
 
-  // Rewards
   const rewardsEl = document.getElementById('edit-rewards');
-  rewardsEl.innerHTML = state.rewards.map((r, i) => `
+  rewardsEl.innerHTML = editConfig.rewards.map((r, i) => `
     <div class="task-edit-row">
-      <input class="emoji-input" value="${r.emoji}" data-field="reward-emoji-${i}">
-      <input class="name-input" value="${escHTML(r.name)}" data-field="reward-name-${i}">
+      <input class="emoji-input" value="${escAttr(r.emoji)}" data-field="reward-emoji-${i}">
+      <input class="name-input" value="${escAttr(r.name)}" data-field="reward-name-${i}">
       <input class="stars-input" type="number" value="${r.cost}" min="1" max="100" data-field="reward-cost-${i}">
       <span style="font-size:0.75rem;color:#8aaabf;">⭐</span>
       <button class="remove-task-btn" onclick="removeReward(${i})">×</button>
     </div>
   `).join('');
 
-  // Levels
   const levelsEl = document.getElementById('edit-levels');
-  levelsEl.innerHTML = state.levels.map((l, i) => `
+  levelsEl.innerHTML = editConfig.levels.map((l, i) => `
     <div class="task-edit-row">
       <span style="font-weight:700;font-size:0.85rem;color:#6b8cae;width:20px;">${i+1}</span>
-      <input class="name-input" value="${escHTML(l.name)}" data-field="level-name-${i}">
+      <input class="name-input" value="${escAttr(l.name)}" data-field="level-name-${i}">
       <input class="stars-input" type="number" value="${l.xp}" min="0" data-field="level-xp-${i}" ${i===0?'disabled':''}>
       <span style="font-size:0.75rem;color:#8aaabf;">XP</span>
     </div>
   `).join('');
 
-  // Star balance input
-  document.getElementById('adjust-stars-input').value = state.currentStars;
+  document.getElementById('adjust-stars-input').value = progress.currentStars;
 }
 
-function escHTML(s) { return s.replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
-
 function readParentInputs() {
-  // Read daily tasks
-  state.dailyTasks.forEach((t, i) => {
+  if (!editConfig) return;
+  editConfig.dailyTasks.forEach((t, i) => {
     const emoji = document.querySelector(`[data-field="daily-emoji-${i}"]`);
-    const name = document.querySelector(`[data-field="daily-name-${i}"]`);
+    const name  = document.querySelector(`[data-field="daily-name-${i}"]`);
     const stars = document.querySelector(`[data-field="daily-stars-${i}"]`);
     if (emoji) t.emoji = emoji.value;
-    if (name) t.name = name.value;
+    if (name)  t.name  = name.value;
     if (stars) t.stars = Math.max(1, parseInt(stars.value) || 1);
   });
-
-  // Read bonus menu
-  state.bonusMenu.forEach((t, i) => {
+  editConfig.bonusMenu.forEach((t, i) => {
     const emoji = document.querySelector(`[data-field="bonus-emoji-${i}"]`);
-    const name = document.querySelector(`[data-field="bonus-name-${i}"]`);
+    const name  = document.querySelector(`[data-field="bonus-name-${i}"]`);
     const stars = document.querySelector(`[data-field="bonus-stars-${i}"]`);
     if (emoji) t.emoji = emoji.value;
-    if (name) t.name = name.value;
+    if (name)  t.name  = name.value;
     if (stars) t.stars = Math.max(1, parseInt(stars.value) || 1);
   });
-
-  // Read rewards
-  state.rewards.forEach((r, i) => {
+  editConfig.rewards.forEach((r, i) => {
     const emoji = document.querySelector(`[data-field="reward-emoji-${i}"]`);
-    const name = document.querySelector(`[data-field="reward-name-${i}"]`);
-    const cost = document.querySelector(`[data-field="reward-cost-${i}"]`);
+    const name  = document.querySelector(`[data-field="reward-name-${i}"]`);
+    const cost  = document.querySelector(`[data-field="reward-cost-${i}"]`);
     if (emoji) r.emoji = emoji.value;
-    if (name) r.name = name.value;
-    if (cost) r.cost = Math.max(1, parseInt(cost.value) || 1);
+    if (name)  r.name  = name.value;
+    if (cost)  r.cost  = Math.max(1, parseInt(cost.value) || 1);
   });
-
-  // Read levels
-  state.levels.forEach((l, i) => {
+  editConfig.levels.forEach((l, i) => {
     const name = document.querySelector(`[data-field="level-name-${i}"]`);
-    const xp = document.querySelector(`[data-field="level-xp-${i}"]`);
+    const xp   = document.querySelector(`[data-field="level-xp-${i}"]`);
     if (name) l.name = name.value;
     if (xp && i > 0) l.xp = Math.max(0, parseInt(xp.value) || 0);
   });
@@ -741,86 +901,152 @@ function readParentInputs() {
 
 function saveParentChanges() {
   readParentInputs();
-  saveState();
+  config = JSON.parse(JSON.stringify(editConfig));
+  // Keep cache so changes survive reload until lh-todos-config.json is updated
+  try { localStorage.setItem(CONFIG_CACHE_KEY, JSON.stringify(config)); } catch {}
   showView('board');
-  showToast('Settings saved!');
+  showToast('Applied — download config.json to make permanent');
+}
+
+function downloadConfig() {
+  readParentInputs();
+  const data = JSON.stringify(editConfig, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'lh-todos-config.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Downloaded — replace lh-todos-config.json in your repo');
 }
 
 function addDailyTask() {
   readParentInputs();
-  state.dailyTasks.push({id: state.nextId++, emoji:'📌', name:'New task', stars:1, done:false});
-  saveState();
+  editConfig.dailyTasks.push({id: editConfig.nextId++, emoji:'📌', name:'New task', stars:1});
   renderParentSetup();
 }
 
 function removeDailyTask(i) {
   readParentInputs();
-  state.dailyTasks.splice(i, 1);
-  saveState();
+  editConfig.dailyTasks.splice(i, 1);
   renderParentSetup();
 }
 
 function addBonusMenuItem() {
   readParentInputs();
-  state.bonusMenu.push({id: state.nextId++, emoji:'🌟', name:'New bonus', stars:1});
-  saveState();
+  editConfig.bonusMenu.push({id: editConfig.nextId++, emoji:'🌟', name:'New bonus', stars:1});
   renderParentSetup();
 }
 
 function removeBonusMenuItem(i) {
   readParentInputs();
-  state.bonusMenu.splice(i, 1);
-  saveState();
+  editConfig.bonusMenu.splice(i, 1);
   renderParentSetup();
 }
 
 function addReward() {
   readParentInputs();
-  state.rewards.push({id: state.nextId++, emoji:'🎁', name:'New reward', cost:5});
-  saveState();
+  editConfig.rewards.push({id: editConfig.nextId++, emoji:'🎁', name:'New reward', cost:5});
   renderParentSetup();
 }
 
 function removeReward(i) {
   readParentInputs();
-  state.rewards.splice(i, 1);
-  saveState();
+  editConfig.rewards.splice(i, 1);
   renderParentSetup();
 }
 
 function adjustStars() {
   const val = parseInt(document.getElementById('adjust-stars-input').value);
-  if (!isNaN(val) && val >= 0) {
-    state.currentStars = val;
-    saveState();
-    showToast(`Stars set to ${val}`);
-  }
+  if (isNaN(val) || val < 0) return;
+  const delta = val - progress.currentStars;
+  progress.currentStars = val;
+  if (delta !== 0) pushHistory({kind:'adjust', amount:delta, label:'Manual adjust'});
+  saveProgress();
+  showToast(`Stars set to ${val}`);
 }
 
 function resetToday() {
-  if (confirm('Reset all tasks for today? Stars and level will be kept.')) {
-    state.dailyTasks.forEach(t => t.done = false);
-    state.activeBonuses = [];
-    saveState();
+  if (confirm('Reset today\'s tasks? Stars and level will be kept.')) {
+    progress.doneIds = [];
+    progress.parentCheckedIds = [];
+    progress.activeBonuses = [];
+    saveProgress();
     renderParentSetup();
     showToast('Today\'s tasks reset');
   }
 }
 
 function resetAllData() {
-  if (confirm('This will erase ALL data including stars and levels. Are you sure?')) {
-    state = JSON.parse(JSON.stringify(DEFAULTS));
-    state.lastDate = todayStr();
-    saveState();
+  if (confirm('Reset stars, levels and history?\n\nYour tasks and rewards (loaded from lh-todos-config.json) will be kept.')) {
+    progress = JSON.parse(JSON.stringify(PROGRESS_DEFAULTS));
+    progress.lastDate = todayStr();
+    saveProgress();
     renderParentSetup();
-    showToast('All data reset');
+    showToast('Stars and history reset');
   }
 }
 
+// ── History view ──────────────────────────────────
+function renderHistory() {
+  const earned = progress.history.filter(h => h.kind === 'earn').reduce((s, h) => s + h.amount, 0);
+  const spent  = progress.history.filter(h => h.kind === 'spend').reduce((s, h) => s - h.amount, 0);
+
+  document.getElementById('history-summary').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;text-align:center;">
+      <div><div style="font-size:0.7rem;color:#8aaabf;font-weight:700;letter-spacing:1px;">EARNED</div><div style="font-family:'Baloo 2',cursive;font-size:1.4rem;color:var(--mint);">+${earned}⭐</div></div>
+      <div><div style="font-size:0.7rem;color:#8aaabf;font-weight:700;letter-spacing:1px;">SPENT</div><div style="font-family:'Baloo 2',cursive;font-size:1.4rem;color:var(--coral);">-${spent}⭐</div></div>
+      <div><div style="font-size:0.7rem;color:#8aaabf;font-weight:700;letter-spacing:1px;">BALANCE</div><div style="font-family:'Baloo 2',cursive;font-size:1.4rem;color:var(--sun);">${progress.currentStars}⭐</div></div>
+    </div>`;
+
+  const listEl = document.getElementById('history-list');
+  if (!progress.history.length) {
+    listEl.innerHTML = '<div style="text-align:center;color:#8aaabf;padding:24px;">No activity yet — complete a task to start!</div>';
+    return;
+  }
+  const today = todayStr();
+  listEl.innerHTML = progress.history.slice(0, 100).map(h => {
+    const d = new Date(h.ts);
+    const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const isToday = dStr === today;
+    const dateStr = isToday
+      ? `Today ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+      : `${d.getDate()}/${d.getMonth()+1} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const sign = h.amount > 0 ? '+' : '';
+    const color = h.amount > 0 ? 'var(--mint)' : (h.amount < 0 ? 'var(--coral)' : '#8aaabf');
+    const icon = {earn:'⭐', spend:'🛍', undo:'↶', adjust:'⚙'}[h.kind] || '•';
+    return `<div class="history-row">
+      <span class="hist-icon">${icon}</span>
+      <div class="hist-body">
+        <div class="hist-label">${escHTML(h.label||'')}</div>
+        <div class="hist-date">${dateStr}</div>
+      </div>
+      <div class="hist-amount" style="color:${color}">${sign}${h.amount}⭐</div>
+      <div class="hist-balance">→${h.balanceAfter}</div>
+    </div>`;
+  }).join('');
+}
+
+function exportHistory() {
+  const data = JSON.stringify(progress.history, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `lh-todos-history-${todayStr()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('History downloaded');
+}
+
 // ── Init ──────────────────────────────────────────
-loadState();
-checkDailyReset();
-renderBoard();
+(async () => {
+  await loadConfig();
+  loadProgress();
+  checkDailyReset();
+  renderBoard();
+})();
 </script>
 </body>
 </html>

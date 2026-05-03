@@ -72,14 +72,18 @@
   .config-banner code{background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:4px;font-size:0.85em;}
 
   /* History list */
-  .history-row{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid #f0f4f8;font-size:0.88rem;}
+  .history-row{display:grid;grid-template-columns:auto 1fr auto auto auto;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid #f0f4f8;font-size:0.88rem;}
   .history-row:last-child{border-bottom:none;}
+  .history-row.undone .hist-label,.history-row.undone .hist-amount{text-decoration:line-through;opacity:0.55;}
   .hist-icon{font-size:1.1rem;}
   .hist-body{min-width:0;}
   .hist-label{font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .hist-date{font-size:0.72rem;color:#8aaabf;}
   .hist-amount{font-weight:800;font-size:0.92rem;}
   .hist-balance{font-size:0.78rem;color:#8aaabf;font-weight:700;min-width:38px;text-align:right;}
+  .hist-undo-btn{width:26px;height:26px;border-radius:50%;border:none;background:rgba(255,107,107,0.14);color:var(--coral);font-size:0.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:800;line-height:1;}
+  .hist-undo-btn:hover{background:var(--coral);color:white;transform:scale(1.1);}
+  .hist-action-spacer{width:26px;}
 
   /* Star burst animation */
   .star-burst{position:absolute;pointer-events:none;font-size:1.4rem;animation:burstOut 0.7s ease-out forwards;}
@@ -1015,8 +1019,11 @@ function renderHistory() {
       : `${d.getDate()}/${d.getMonth()+1} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
     const sign = h.amount > 0 ? '+' : '';
     const color = h.amount > 0 ? 'var(--mint)' : (h.amount < 0 ? 'var(--coral)' : '#8aaabf');
-    const icon = {earn:'⭐', spend:'🛍', undo:'↶', adjust:'⚙'}[h.kind] || '•';
-    return `<div class="history-row">
+    const icon = {earn:'⭐', spend:'🛍', undo:'↶', refund:'↩', adjust:'⚙'}[h.kind] || '•';
+    const action = (h.kind === 'spend' && !h.undone)
+      ? `<button class="hist-undo-btn" onclick="undoRedeem(${h.ts})" title="Refund this redemption">↩</button>`
+      : '<span class="hist-action-spacer"></span>';
+    return `<div class="history-row${h.undone?' undone':''}">
       <span class="hist-icon">${icon}</span>
       <div class="hist-body">
         <div class="hist-label">${escHTML(h.label||'')}</div>
@@ -1024,8 +1031,23 @@ function renderHistory() {
       </div>
       <div class="hist-amount" style="color:${color}">${sign}${h.amount}⭐</div>
       <div class="hist-balance">→${h.balanceAfter}</div>
+      ${action}
     </div>`;
   }).join('');
+}
+
+function undoRedeem(ts) {
+  const entry = progress.history.find(h => h.ts === ts);
+  if (!entry || entry.kind !== 'spend' || entry.undone) return;
+  const amount = Math.abs(entry.amount);
+  if (!confirm(`Refund "${entry.label}" (+${amount}⭐)?`)) return;
+  progress.currentStars += amount;
+  progress.totalSpent = Math.max(0, progress.totalSpent - amount);
+  entry.undone = true;
+  pushHistory({kind:'refund', amount:amount, label:`Refund: ${entry.label}`});
+  saveProgress();
+  renderHistory();
+  showToast(`Refunded ${amount}⭐`);
 }
 
 function exportHistory() {

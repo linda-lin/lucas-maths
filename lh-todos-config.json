@@ -7,33 +7,33 @@
     {"id": 4, "emoji": "🧹", "name": "clean up dining table", "stars": 1},
     {"id": 5, "emoji": "🎵", "name": "Clarinet", "stars": 1},
     {"id": 6, "emoji": "📚", "name": "Read for 30 minutes", "stars": 1},
-    {"id": 7, "emoji": "📚", "name": "English - vocabulary + good expression", "stars": 1},
-    {"id": 8, "emoji": "📚", "name": "English - kids new words", "stars": 1},
-    {"id": 9, "emoji": "📚", "name": "English - writing + Maggie's homework", "stars": 1},
+    {"id": 12, "emoji": "📚", "name": "homework", "stars": 1},
     {"id": 10, "emoji": "📚", "name": "Khan", "stars": 1},
-    {"id": 11, "emoji": "📚", "name": "中文 - 写字 + 读书", "stars": 1}
+    {"id": 11, "emoji": "📚", "name": "中文 - 写字 + 读书", "stars": 1},
+    {"id": 7, "emoji": "📚", "name": "English - vocabulary + good expression", "stars": 1},
+    {"id": 8, "emoji": "📚", "name": "English - kids news", "stars": 1},
+    {"id": 9, "emoji": "📚", "name": "English - writing + Maggie's homework", "stars": 1},
+
 
   ],
   "bonusMenu": [
-    {"id": 100, "emoji": "🐾", "name": "Help with pets", "stars": 1},
     {"id": 111, "emoji": "❤️", "name": "being kinds / gentle / polite", "stars": 1},
-    {"id": 109, "emoji": "⛹️‍♂️", "name": "running", "stars": 1},
+    {"id": 109, "emoji": "⛹️‍♂️", "name": "extra excercise / sport", "stars": 1},
+    {"id": 100, "emoji": "🐾", "name": "Help with pets", "stars": 1},
     {"id": 101, "emoji": "🍽️", "name": "Set the table", "stars": 1},
-    {"id": 102, "emoji": "🧺", "name": "Put away laundry", "stars": 1},
-    {"id": 103, "emoji": "📚", "name": "Extra maths practice", "stars": 1},
+    {"id": 110, "emoji": "🍽️", "name": "help with cooking", "stars": 1},
     {"id": 104, "emoji": "🍽️", "name": "unload dishwasher", "stars": 1},
+    {"id": 102, "emoji": "🧺", "name": "do laundry", "stars": 1},
+    {"id": 103, "emoji": "📚", "name": "Extra maths practice", "stars": 1},
     {"id": 105, "emoji": "🧹", "name": "move the bins", "stars": 1},
     {"id": 106, "emoji": "🧹", "name": "Vacuum stairs", "stars": 1},
-    {"id": 107, "emoji": "🧹", "name": "mop living room", "stars": 1},
-    {"id": 108, "emoji": "🧹", "name": "do laundry", "stars": 1},
-    {"id": 110, "emoji": "🧹", "name": "clean dining room", "stars": 1}
-
+    {"id": 107, "emoji": "🧹", "name": "mop living room", "stars": 1}
   ],
   "rewards": [
     {"id": 200, "emoji": "📖", "name": "Audible story", "cost": 3},
     {"id": 201, "emoji": "🍫", "name": "treat", "cost": 5},
-    {"id": 202, "emoji": "🎮", "name": "30 min gaming", "cost": 10},
-    {"id": 203, "emoji": "🎬", "name": "Movie night", "cost": 8}
+    {"id": 203, "emoji": "🎬", "name": "Movie night", "cost": 8},
+    {"id": 202, "emoji": "🎮", "name": "30 min gaming / screen time", "cost": 10}
   ],
   "levels": [
     {"name": "Star Starter", "xp": 0},
